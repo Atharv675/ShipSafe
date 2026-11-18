@@ -1,0 +1,60 @@
+# Dataset configuration. Every value below was verified against official sources on 2026-11-18:
+#   - https://github.com/FutureComputing4AI/EMBER2024 (README + src/thrember/download.py @ 0ef753e)
+#   - https://huggingface.co/datasets/joyce8/EMBER2024 (dataset card + file tree)
+dataset:
+  name: EMBER2024
+  hf_repo_id: joyce8/EMBER2024          # from thrember/download.py
+  hf_repo_type: dataset
+  # Zip naming from thrember/download.py: "{file_type}_{split}.zip"
+  zip_name_template: "{file_type}_{split}.zip"
+  # Member naming observed in the zip central directories: "{start}_{end}_{file_type}_{split}.jsonl"
+  member_regex: '^(?P<start>\d{4}-\d{2}-\d{2})_(?P<end>\d{4}-\d{2}-\d{2})_(?P<file_type>[A-Za-z0-9_]+)_(?P<split>train|test)\.jsonl$'
+  file_types: [Win32, Win64, Dot_Net, APK, ELF, PDF]
+  splits: [train, test]
+  # Metadata columns from thrember/model.py ORDERED_COLUMNS
+  metadata_columns:
+    - sha256
+    - tlsh
+    - first_submission_date
+    - last_analysis_date
+    - detection_ratio
+    - label
+    - file_type
+    - family
+    - family_confidence
+    - behavior
+    - file_property
+    - packer
+    - exploit
+    - group
+  label_column: label
+  time_column: first_submission_date
+  # Feature blocks consumed by thrember.PEFeatureExtractor.process_raw_features
+  feature_blocks:
+    - general
+    - histogram
+    - byteentropy
+    - strings
+    - header
+    - section
+    - imports
+    - exports
+    - datadirectories
+    - richheader
+    - authenticode
+    - pefilewarnings
+
+# Published figures (dataset card "File Statistics"), used only to flag mismatches.
+expected:
+  train_weeks: 52
+  test_weeks: 12
+  per_file_type:
+    Win32:   {weekly: 30000, train: 1560000, test: 360000}
+    Win64:   {weekly: 10000, train: 520000,  test: 120000}
+    Dot_Net: {weekly: 5000,  train: 260000,  test: 60000}
+    APK:     {weekly: 4000,  train: 208000,  test: 48000}
+    PDF:     {weekly: 1000,  train: 52000,   test: 12000}
+    ELF:     {weekly: 500,   train: 26000,   test: 6000}
+
+# The plan's operating point needs enough benign test files to resolve a 0.01% false-alarm rate.
+min_benign_test_files: 50000
