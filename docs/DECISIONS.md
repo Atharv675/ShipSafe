@@ -31,7 +31,8 @@ Pipeline shape
 - **Win64 and Win32 are separate datasets** (own splits, manifest, never-break set, later own models) — different populations; mixing them would blur what the gate measures — *one pooled dataset*.
 - **Streaming, two passes, one week per worker** (`src/sentinel/data/pipeline.py`) — Win32 is ~1.9M × 2568 float32 ≈ 20 GB; Colab free has ~12.7 GB RAM. Only ids + 16-byte row hashes cross weeks — *loading a split into memory*.
 - **Layout `data/splits/<type>/week=NN/part.parquet`** with global week numbers 01..64 (train 01–52, test 53–64 for both types), `manifest.json` next to them; never-break in `data/clean/<type>/never_break.parquet` — the plan's `week=NN` layout plus one level per dataset — *mixed-type directories*.
-- **Cleaned data is rebuilt on Colab each session, not stored** — free Drive (15 GB) cannot hold Win32; the pipeline is deterministic and manifest hashes prove a rebuild is identical — *Google Drive storage*.
+- **Heavy runs on Kaggle CPU notebooks instead of Colab free** (owner, 2026-11-19) — Colab free recycled the VM after a long run and the results were lost; Kaggle gives 4 CPUs / ~34 GB RAM and background "Save & Run All" with a kept Output folder — *Colab Pro*.
+- **Cleaned data is rebuilt each session, not stored** — free Drive (15 GB) cannot hold Win32; the pipeline is deterministic and manifest hashes prove a rebuild is identical — *Google Drive storage*.
 - **Vectors from the official `thrember.PEFeatureExtractor`** (same as Stage 0) — published EMBER v3 features — *own vectoriser*.
 
 Cleaning rules (in order; each logs before/after counts into manifest.json)

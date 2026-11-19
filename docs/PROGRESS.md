@@ -1,15 +1,15 @@
 # Progress
 
 > **HANDOFF (2026-11-19)**
-> - **Owner decisions:** Win64 + Win32 as separate datasets; all heavy runs on **Google Colab free** (~12.7 GB RAM, ephemeral disk); cleaned data is rebuilt each session (not stored).
-> - **Stage 1 code done + verified locally:** pipeline, schema, rules, tests (70 passed, 97%), real-data smoke run on PDF in the sandbox (64 weeks, 52,000/12,000 rows, 690 features, 500 never-break, 2m15s).
-> - **Next:** owner runs `notebooks/stage1_clean_win64_win32.ipynb` on Colab with a fresh `dist/sentinel_gate_code.zip` (`make bundle`). It returns `sentinel_stage1_results.zip`; copy `cleaning/Win64.json` + `cleaning/Win32.json` into `docs/cleaning/`, run `make cleaning-report`, update this file, then STOP.
+> - **Owner decisions:** Win64 + Win32 as separate datasets. Heavy runs moved from Colab free (VM recycled after long runs, results lost) to **Kaggle CPU notebooks** (4 CPUs, ~34 GB RAM, background "Save & Run All"). Cleaned data is rebuilt each session (not stored); manifests prove it.
+> - **Stage 1 DONE (2026-11-19), waiting for owner go-ahead for Stage 2.** Win64 + Win32 cleaned on Kaggle (~50 min total); manifests in `docs/cleaning/`, report `docs/CLEANING_REPORT.md`.
+> - **For Stage 2:** train with `sentinel.data.splits.labelled_as_of`; each Kaggle session first rebuilds splits with `scripts/clean_data.py` and checks per-week sha256 against `docs/cleaning/<type>.json`. Win32 train ≈ 1.56M × 2536 float32 ≈ 16 GB: fits in Kaggle's 34 GB, but load per week / LightGBM Dataset bins. Notebook platform check: detect Kaggle FIRST (Kaggle images contain `google.colab` and `/content`).
 > - **Before uploading anything to Kaggle/Colab:** the owner does it (outward-facing).
 
 | Stage | Title | Status |
 |---|---|---|
 | 0 | Repo setup and dataset check [STOP] | DONE |
-| 1 | Data cleaning and data contracts | IN PROGRESS (waiting for Colab run) |
+| 1 | Data cleaning and data contracts | DONE (awaiting owner go-ahead) |
 | 2 | Baseline models and evaluation harness | TODO |
 | 3 | Serving service | TODO |
 | 4 | Replay stream and shadow scoring | TODO |
@@ -64,7 +64,20 @@ Owner rules: no git/GitHub commands by the assistant; wait for go-ahead after ev
 - `make test` — 70 passed; coverage 97% total; `src/sentinel/data/*` 95–100% (pipeline 96%, schema 95%, clean 100%).
 - Real-data smoke run (PDF, sandbox, 4 workers, 2m15s): 104,000→52,000 train and 24,000→12,000 test rows (raw repeats), 0 bad labels/timestamps/non-finite, 0 leakage, 0 duplicate vectors, 2,568→690 features, 500 never-break rows.
 - Profiling one Dot_Net (PE) week: ~1.8 ms/file pass 1, ~0.6 ms/file pass 2 → Colab estimate ~25 min Win64, ~60–80 min Win32 (2 CPUs) plus downloads.
-- Pending: Colab run for Win64 + Win32 (final counts, manifests, CLEANING_REPORT.md).
+
+### Check results (final, Kaggle run 2026-11-19)
+- `make data` equivalent (`download_ember.py` + `clean_data.py`) ran on Kaggle CPU (4 workers) from `dist/sentinel_gate_code.zip`: Win64 cleaned in 12.6 min, whole run ~50 min. Raw zip SHA-256 identical to Stage 0.
+- `manifest.json` written for both types (copies in `docs/cleaning/`); `docs/CLEANING_REPORT.md` rebuilt in the sandbox (`make cleaning-report`).
+- Win64: train 519,991 / test 119,990 (benign test 59,990); 2,538 / 2,568 features; removed 9 duplicate vectors in train (1 label conflict), 7 cross-week repeats + 3 test-vector-in-train in test; 13 early-dated rows kept; 500 never-break.
+- Win32: train 1,559,966 / test 359,986 (benign test 179,987); 2,536 / 2,568 features; removed 34 duplicate vectors in train (0 conflicts), 6 cross-week repeats + 5 test-vector-in-train + 3 duplicate vectors in test; 23 early-dated rows kept; 500 never-break.
+- Both: 52 train weeks (01–52), 12 test weeks (53–64); 0 bad labels, 0 bad timestamps, 0 non-finite values; every step's before − after = removed (checked in the sandbox).
+- `make lint` clean; `make test` 70 passed, 97% coverage (data package ≥ 95%).
+- Provenance note: the bundle records commit `63babe6`, but it was built from the Stage 1 working tree before that code was committed; `BUNDLE_INFO.json` per-file sha256s identify the exact code.
+
+### Notebook issues found and fixed (Stage 1)
+- Colab free recycled the VM after a long run → results lost: results zip is now handed back after each type.
+- Platform detection: Colab images contain `/kaggle`, Kaggle images contain `google.colab` + `/content` → results were written to a discarded folder. Now Kaggle is detected first (env markers / `/kaggle/input`) and results are always also copied to `/kaggle/working`.
+- Bulk data is never written under `/kaggle/working` (Kaggle's 20 GB output cap); cleaned splits are deleted after their manifest is saved.
 
 ### Issues found and fixed (Stage 1)
 - Determinism test was intermittently red: the synthetic test zips carried the wall-clock entry timestamp, so two runs built in different seconds had genuinely different raw bytes (different fingerprint). Fixed the test fixture with a fixed zip entry time; the pipeline itself was deterministic.
