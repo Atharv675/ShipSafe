@@ -29,6 +29,11 @@ dataset:
     - group
   label_column: label
   time_column: first_submission_date
+  id_column: sha256
+  # The raw JSONL repeats every record (measured 2026-11-18: each sha256 appears twice in its
+  # weekly file). Repeats may differ only in these Capa output keys (README: "EMBER2024 has been
+  # updated to include Capa results"). Counts are reported over unique sha256.
+  dup_ignored_columns: [caps, ttps, mbc]
   # Feature blocks consumed by thrember.PEFeatureExtractor.process_raw_features
   feature_blocks:
     - general
@@ -58,3 +63,12 @@ expected:
 
 # The plan's operating point needs enough benign test files to resolve a 0.01% false-alarm rate.
 min_benign_test_files: 50000
+
+# What docs/BUILD_PLAN.md assumed ("PDF subset ≈ 52,000 train / 12,000 test; 52 train weeks,
+# 12 test weeks"). Checked against the measurements in DATASET_REPORT.md.
+plan_assumption:
+  file_type: PDF
+  train: 52000
+  test: 12000
+  train_weeks: 52
+  test_weeks: 12

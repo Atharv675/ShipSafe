@@ -1,0 +1,2810 @@
+{
+ "feature_dim": 2568,
+ "file_type": "Win64",
+ "flags": [
+  "train: raw JSONL has 1,040,000 rows but 520,000 unique sha256 (520,000 repeated records; 97,041 byte-identical, 422,959 differ only in caps/ttps/mbc, 0 differ elsewhere, 0 label conflicts)",
+  "test: raw JSONL has 240,000 rows but 120,000 unique sha256 (120,000 repeated records; 17,804 byte-identical, 102,196 differ only in caps/ttps/mbc, 0 differ elsewhere, 0 label conflicts)",
+  "test: 7 files appear in more than one week (119,993 unique sha256 across the split)",
+  "test: 13 rows have first_submission_date outside their weekly file's date range (days outside: -1: 13)"
+ ],
+ "generated_at": "2026-11-19 06:20 UTC",
+ "nonconstant_features_in_sample": 2512,
+ "provenance": [
+  "measured in: Kaggle notebook; repo commit `848a6284c76e39a3165829936bc140b04f0cd7cf (code bundle)`; feature sample 100 train rows/week",
+  "`Win64_test.zip` sha256 `52a5a05c1bfa5bb021bb8b44c2e0afcf8983dfa1c6c0a9d76db393e5c682ce10`",
+  "`Win64_train.zip` sha256 `7b050100ce7bd87149bbfca442de3e02d4bf97d51251566caec2581eebe799fd`"
+ ],
+ "sample_rows": 5200,
+ "schema_version": 1,
+ "splits": {
+  "test": {
+   "benign": 60000,
+   "dup_differ_only_ignored": 102196,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 102010,
+    "mbc": 96003,
+    "ttps": 93182
+   },
+   "dup_identical": 17804,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 120000,
+   "file_type": "Win64",
+   "first_week": "2024-09-22..2024-09-28",
+   "labels": {
+    "0": 60000,
+    "1": 60000
+   },
+   "last_week": "2024-12-08..2024-12-14",
+   "malicious": 60000,
+   "max_time": "2024-12-14T23:59:37+00:00",
+   "min_time": "2024-09-22T00:01:48+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 72727,
+    "family_confidence": 72727
+   },
+   "outside_week": 13,
+   "outside_week_days": {
+    "-1": 13
+   },
+   "raw_rows": 240000,
+   "rows": 120000,
+   "split": "test",
+   "time_types": {
+    "int": 120000
+   },
+   "unique_ids": 119993,
+   "unlabeled": 0,
+   "unparsable_time": 0,
+   "weeks": 12
+  },
+  "train": {
+   "benign": 260000,
+   "dup_differ_only_ignored": 422959,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 421347,
+    "mbc": 397174,
+    "ttps": 386842
+   },
+   "dup_identical": 97041,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 520000,
+   "file_type": "Win64",
+   "first_week": "2023-09-24..2023-09-30",
+   "labels": {
+    "0": 260000,
+    "1": 260000
+   },
+   "last_week": "2024-09-15..2024-09-21",
+   "malicious": 260000,
+   "max_time": "2024-09-21T23:59:41+00:00",
+   "min_time": "2023-09-24T00:01:40+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 313268,
+    "family_confidence": 313268
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 1040000,
+   "rows": 520000,
+   "split": "train",
+   "time_types": {
+    "int": 520000
+   },
+   "unique_ids": 520000,
+   "unlabeled": 0,
+   "unparsable_time": 0,
+   "weeks": 52
+  }
+ },
+ "train_test_overlap": 0,
+ "weekly": [
+  {
+   "dup_differ_only_ignored": 8006,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 7991,
+    "mbc": 7400,
+    "ttps": 7328
+   },
+   "dup_identical": 1994,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2023-09-30T23:59:45+00:00",
+   "min_time": "2023-09-24T00:01:40+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 5906,
+    "family_confidence": 5906
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-09-30",
+    "file_type": "Win64",
+    "name": "2023-09-24_2023-09-30_Win64_train.jsonl",
+    "split": "train",
+    "start": "2023-09-24"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8087,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8068,
+    "mbc": 7384,
+    "ttps": 7329
+   },
+   "dup_identical": 1913,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2023-10-06T23:55:55+00:00",
+   "min_time": "2023-10-01T00:01:45+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 5758,
+    "family_confidence": 5758
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-10-07",
+    "file_type": "Win64",
+    "name": "2023-10-01_2023-10-07_Win64_train.jsonl",
+    "split": "train",
+    "start": "2023-10-01"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8293,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8283,
+    "mbc": 7618,
+    "ttps": 7574
+   },
+   "dup_identical": 1707,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2023-10-14T19:55:10+00:00",
+   "min_time": "2023-10-08T00:00:02+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 5761,
+    "family_confidence": 5761
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-10-14",
+    "file_type": "Win64",
+    "name": "2023-10-08_2023-10-14_Win64_train.jsonl",
+    "split": "train",
+    "start": "2023-10-08"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8218,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8205,
+    "mbc": 7725,
+    "ttps": 7686
+   },
+   "dup_identical": 1782,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2023-10-21T23:59:46+00:00",
+   "min_time": "2023-10-15T00:01:41+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 5748,
+    "family_confidence": 5748
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-10-21",
+    "file_type": "Win64",
+    "name": "2023-10-15_2023-10-21_Win64_train.jsonl",
+    "split": "train",
+    "start": "2023-10-15"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 7831,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 7815,
+    "mbc": 7342,
+    "ttps": 7305
+   },
+   "dup_identical": 2169,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2023-10-28T23:58:53+00:00",
+   "min_time": "2023-10-22T00:00:02+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 5865,
+    "family_confidence": 5865
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-10-28",
+    "file_type": "Win64",
+    "name": "2023-10-22_2023-10-28_Win64_train.jsonl",
+    "split": "train",
+    "start": "2023-10-22"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8010,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 7996,
+    "mbc": 7469,
+    "ttps": 7385
+   },
+   "dup_identical": 1990,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2023-11-04T23:58:33+00:00",
+   "min_time": "2023-10-29T00:00:25+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 5802,
+    "family_confidence": 5802
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-11-04",
+    "file_type": "Win64",
+    "name": "2023-10-29_2023-11-04_Win64_train.jsonl",
+    "split": "train",
+    "start": "2023-10-29"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 7973,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 7958,
+    "mbc": 7464,
+    "ttps": 7370
+   },
+   "dup_identical": 2027,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2023-11-11T23:58:23+00:00",
+   "min_time": "2023-11-05T00:03:51+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 5981,
+    "family_confidence": 5981
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-11-11",
+    "file_type": "Win64",
+    "name": "2023-11-05_2023-11-11_Win64_train.jsonl",
+    "split": "train",
+    "start": "2023-11-05"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 7768,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 7740,
+    "mbc": 7221,
+    "ttps": 7101
+   },
+   "dup_identical": 2232,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2023-11-18T23:38:40+00:00",
+   "min_time": "2023-11-12T00:00:27+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6058,
+    "family_confidence": 6058
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-11-18",
+    "file_type": "Win64",
+    "name": "2023-11-12_2023-11-18_Win64_train.jsonl",
+    "split": "train",
+    "start": "2023-11-12"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8062,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8037,
+    "mbc": 7565,
+    "ttps": 7359
+   },
+   "dup_identical": 1938,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2023-11-25T23:59:33+00:00",
+   "min_time": "2023-11-19T00:01:06+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 5926,
+    "family_confidence": 5926
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-11-25",
+    "file_type": "Win64",
+    "name": "2023-11-19_2023-11-25_Win64_train.jsonl",
+    "split": "train",
+    "start": "2023-11-19"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 7997,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 7980,
+    "mbc": 7563,
+    "ttps": 7458
+   },
+   "dup_identical": 2003,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2023-12-02T23:56:35+00:00",
+   "min_time": "2023-11-26T00:00:00+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 5912,
+    "family_confidence": 5912
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-12-02",
+    "file_type": "Win64",
+    "name": "2023-11-26_2023-12-02_Win64_train.jsonl",
+    "split": "train",
+    "start": "2023-11-26"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8135,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8109,
+    "mbc": 7550,
+    "ttps": 7398
+   },
+   "dup_identical": 1865,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2023-12-09T23:55:35+00:00",
+   "min_time": "2023-12-03T00:00:25+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 5847,
+    "family_confidence": 5847
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-12-09",
+    "file_type": "Win64",
+    "name": "2023-12-03_2023-12-09_Win64_train.jsonl",
+    "split": "train",
+    "start": "2023-12-03"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 7902,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 7847,
+    "mbc": 7432,
+    "ttps": 7340
+   },
+   "dup_identical": 2098,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2023-12-16T23:58:17+00:00",
+   "min_time": "2023-12-10T00:00:53+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 5726,
+    "family_confidence": 5726
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-12-16",
+    "file_type": "Win64",
+    "name": "2023-12-10_2023-12-16_Win64_train.jsonl",
+    "split": "train",
+    "start": "2023-12-10"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8365,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8347,
+    "mbc": 7890,
+    "ttps": 7873
+   },
+   "dup_identical": 1635,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2023-12-23T23:55:54+00:00",
+   "min_time": "2023-12-17T00:02:06+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 5534,
+    "family_confidence": 5534
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-12-23",
+    "file_type": "Win64",
+    "name": "2023-12-17_2023-12-23_Win64_train.jsonl",
+    "split": "train",
+    "start": "2023-12-17"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8206,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8192,
+    "mbc": 7744,
+    "ttps": 7755
+   },
+   "dup_identical": 1794,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2023-12-30T23:59:43+00:00",
+   "min_time": "2023-12-24T00:01:38+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 5782,
+    "family_confidence": 5782
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-12-30",
+    "file_type": "Win64",
+    "name": "2023-12-24_2023-12-30_Win64_train.jsonl",
+    "split": "train",
+    "start": "2023-12-24"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8230,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8214,
+    "mbc": 7818,
+    "ttps": 7778
+   },
+   "dup_identical": 1770,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-01-06T23:53:50+00:00",
+   "min_time": "2023-12-31T00:04:15+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 5775,
+    "family_confidence": 5775
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-01-06",
+    "file_type": "Win64",
+    "name": "2023-12-31_2024-01-06_Win64_train.jsonl",
+    "split": "train",
+    "start": "2023-12-31"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8379,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8367,
+    "mbc": 7820,
+    "ttps": 7743
+   },
+   "dup_identical": 1621,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-01-13T11:04:57+00:00",
+   "min_time": "2024-01-07T00:04:30+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 5676,
+    "family_confidence": 5676
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-01-13",
+    "file_type": "Win64",
+    "name": "2024-01-07_2024-01-13_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-01-07"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8175,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8166,
+    "mbc": 7609,
+    "ttps": 7671
+   },
+   "dup_identical": 1825,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-01-20T23:51:28+00:00",
+   "min_time": "2024-01-14T00:01:05+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 5611,
+    "family_confidence": 5611
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-01-20",
+    "file_type": "Win64",
+    "name": "2024-01-14_2024-01-20_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-01-14"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8311,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8305,
+    "mbc": 7833,
+    "ttps": 7829
+   },
+   "dup_identical": 1689,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-01-27T16:22:42+00:00",
+   "min_time": "2024-01-21T00:00:37+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 5592,
+    "family_confidence": 5592
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-01-27",
+    "file_type": "Win64",
+    "name": "2024-01-21_2024-01-27_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-01-21"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8270,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8264,
+    "mbc": 7733,
+    "ttps": 7725
+   },
+   "dup_identical": 1730,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-02-03T23:58:30+00:00",
+   "min_time": "2024-01-28T00:01:17+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 5682,
+    "family_confidence": 5682
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-02-03",
+    "file_type": "Win64",
+    "name": "2024-01-28_2024-02-03_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-01-28"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 7699,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 7680,
+    "mbc": 7250,
+    "ttps": 7217
+   },
+   "dup_identical": 2301,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-02-10T23:59:53+00:00",
+   "min_time": "2024-02-04T00:01:57+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 5759,
+    "family_confidence": 5759
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-02-10",
+    "file_type": "Win64",
+    "name": "2024-02-04_2024-02-10_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-02-04"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 7979,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 7961,
+    "mbc": 7482,
+    "ttps": 7474
+   },
+   "dup_identical": 2021,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-02-17T23:59:47+00:00",
+   "min_time": "2024-02-11T00:02:45+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6005,
+    "family_confidence": 6005
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-02-17",
+    "file_type": "Win64",
+    "name": "2024-02-11_2024-02-17_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-02-11"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8036,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8022,
+    "mbc": 7604,
+    "ttps": 7576
+   },
+   "dup_identical": 1964,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-02-24T23:59:43+00:00",
+   "min_time": "2024-02-18T00:00:28+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6117,
+    "family_confidence": 6117
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-02-24",
+    "file_type": "Win64",
+    "name": "2024-02-18_2024-02-24_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-02-18"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 7312,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 7304,
+    "mbc": 6874,
+    "ttps": 6842
+   },
+   "dup_identical": 2688,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-03-02T23:59:47+00:00",
+   "min_time": "2024-02-25T00:03:57+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6108,
+    "family_confidence": 6108
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-03-02",
+    "file_type": "Win64",
+    "name": "2024-02-25_2024-03-02_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-02-25"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 7877,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 7868,
+    "mbc": 7372,
+    "ttps": 7305
+   },
+   "dup_identical": 2123,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-03-09T23:55:23+00:00",
+   "min_time": "2024-03-03T00:01:42+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6165,
+    "family_confidence": 6165
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-03-09",
+    "file_type": "Win64",
+    "name": "2024-03-03_2024-03-09_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-03-03"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 7757,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 7749,
+    "mbc": 7354,
+    "ttps": 7299
+   },
+   "dup_identical": 2243,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-03-16T23:57:10+00:00",
+   "min_time": "2024-03-10T00:02:50+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6035,
+    "family_confidence": 6035
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-03-16",
+    "file_type": "Win64",
+    "name": "2024-03-10_2024-03-16_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-03-10"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 7807,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 7797,
+    "mbc": 7341,
+    "ttps": 7331
+   },
+   "dup_identical": 2193,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-03-23T23:50:57+00:00",
+   "min_time": "2024-03-17T00:01:22+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6067,
+    "family_confidence": 6067
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-03-23",
+    "file_type": "Win64",
+    "name": "2024-03-17_2024-03-23_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-03-17"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 7751,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 7742,
+    "mbc": 7331,
+    "ttps": 7298
+   },
+   "dup_identical": 2249,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-03-30T23:56:42+00:00",
+   "min_time": "2024-03-24T00:05:41+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6068,
+    "family_confidence": 6068
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-03-30",
+    "file_type": "Win64",
+    "name": "2024-03-24_2024-03-30_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-03-24"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8110,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8103,
+    "mbc": 7490,
+    "ttps": 7375
+   },
+   "dup_identical": 1890,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-04-06T23:57:36+00:00",
+   "min_time": "2024-03-31T00:02:32+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6052,
+    "family_confidence": 6052
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-04-06",
+    "file_type": "Win64",
+    "name": "2024-03-31_2024-04-06_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-03-31"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 7835,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 7824,
+    "mbc": 7438,
+    "ttps": 7313
+   },
+   "dup_identical": 2165,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-04-13T23:59:26+00:00",
+   "min_time": "2024-04-07T00:00:46+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6021,
+    "family_confidence": 6021
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-04-13",
+    "file_type": "Win64",
+    "name": "2024-04-07_2024-04-13_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-04-07"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 7913,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 7904,
+    "mbc": 7429,
+    "ttps": 7441
+   },
+   "dup_identical": 2087,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-04-20T23:58:50+00:00",
+   "min_time": "2024-04-14T00:00:26+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6006,
+    "family_confidence": 6006
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-04-20",
+    "file_type": "Win64",
+    "name": "2024-04-14_2024-04-20_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-04-14"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8982,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8973,
+    "mbc": 8508,
+    "ttps": 8571
+   },
+   "dup_identical": 1018,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-04-27T23:55:06+00:00",
+   "min_time": "2024-04-21T00:06:15+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6358,
+    "family_confidence": 6358
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-04-27",
+    "file_type": "Win64",
+    "name": "2024-04-21_2024-04-27_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-04-21"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8831,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8792,
+    "mbc": 8265,
+    "ttps": 8151
+   },
+   "dup_identical": 1169,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-05-04T23:58:31+00:00",
+   "min_time": "2024-04-28T00:00:53+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6303,
+    "family_confidence": 6303
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-05-04",
+    "file_type": "Win64",
+    "name": "2024-04-28_2024-05-04_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-04-28"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8770,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8704,
+    "mbc": 8267,
+    "ttps": 8175
+   },
+   "dup_identical": 1230,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-05-11T23:59:11+00:00",
+   "min_time": "2024-05-05T00:07:07+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6191,
+    "family_confidence": 6191
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-05-11",
+    "file_type": "Win64",
+    "name": "2024-05-05_2024-05-11_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-05-05"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8774,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8693,
+    "mbc": 8304,
+    "ttps": 8002
+   },
+   "dup_identical": 1226,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-05-18T23:59:47+00:00",
+   "min_time": "2024-05-12T00:01:40+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6165,
+    "family_confidence": 6165
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-05-18",
+    "file_type": "Win64",
+    "name": "2024-05-12_2024-05-18_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-05-12"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8820,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8558,
+    "mbc": 8286,
+    "ttps": 7820
+   },
+   "dup_identical": 1180,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-05-25T23:59:16+00:00",
+   "min_time": "2024-05-19T00:00:57+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6262,
+    "family_confidence": 6262
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-05-25",
+    "file_type": "Win64",
+    "name": "2024-05-19_2024-05-25_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-05-19"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8719,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8395,
+    "mbc": 8235,
+    "ttps": 7412
+   },
+   "dup_identical": 1281,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-06-01T23:58:55+00:00",
+   "min_time": "2024-05-26T00:00:33+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6166,
+    "family_confidence": 6166
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-06-01",
+    "file_type": "Win64",
+    "name": "2024-05-26_2024-06-01_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-05-26"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8947,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8895,
+    "mbc": 8486,
+    "ttps": 7672
+   },
+   "dup_identical": 1053,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-06-08T05:07:53+00:00",
+   "min_time": "2024-06-02T00:00:08+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 5738,
+    "family_confidence": 5738
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-06-08",
+    "file_type": "Win64",
+    "name": "2024-06-02_2024-06-08_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-06-02"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8763,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8722,
+    "mbc": 8273,
+    "ttps": 7775
+   },
+   "dup_identical": 1237,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-06-15T23:59:08+00:00",
+   "min_time": "2024-06-09T00:00:20+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6340,
+    "family_confidence": 6340
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-06-15",
+    "file_type": "Win64",
+    "name": "2024-06-09_2024-06-15_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-06-09"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8372,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8351,
+    "mbc": 7916,
+    "ttps": 7480
+   },
+   "dup_identical": 1628,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-06-22T23:59:13+00:00",
+   "min_time": "2024-06-16T00:04:28+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6152,
+    "family_confidence": 6152
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-06-22",
+    "file_type": "Win64",
+    "name": "2024-06-16_2024-06-22_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-06-16"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8424,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8386,
+    "mbc": 7977,
+    "ttps": 7527
+   },
+   "dup_identical": 1576,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-06-29T23:59:43+00:00",
+   "min_time": "2024-06-23T00:02:12+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6267,
+    "family_confidence": 6267
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-06-29",
+    "file_type": "Win64",
+    "name": "2024-06-23_2024-06-29_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-06-23"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8709,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8689,
+    "mbc": 8233,
+    "ttps": 7711
+   },
+   "dup_identical": 1291,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-07-06T23:57:17+00:00",
+   "min_time": "2024-06-30T00:00:01+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6112,
+    "family_confidence": 6112
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-07-06",
+    "file_type": "Win64",
+    "name": "2024-06-30_2024-07-06_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-06-30"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8537,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8527,
+    "mbc": 8101,
+    "ttps": 7739
+   },
+   "dup_identical": 1463,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-07-13T23:59:46+00:00",
+   "min_time": "2024-07-07T00:03:53+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6102,
+    "family_confidence": 6102
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-07-13",
+    "file_type": "Win64",
+    "name": "2024-07-07_2024-07-13_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-07-07"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8285,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8271,
+    "mbc": 7789,
+    "ttps": 7177
+   },
+   "dup_identical": 1715,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-07-20T23:58:41+00:00",
+   "min_time": "2024-07-14T00:01:26+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6174,
+    "family_confidence": 6174
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-07-20",
+    "file_type": "Win64",
+    "name": "2024-07-14_2024-07-20_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-07-14"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8306,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8283,
+    "mbc": 7886,
+    "ttps": 7493
+   },
+   "dup_identical": 1694,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-07-27T23:59:10+00:00",
+   "min_time": "2024-07-21T00:05:03+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6049,
+    "family_confidence": 6049
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-07-27",
+    "file_type": "Win64",
+    "name": "2024-07-21_2024-07-27_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-07-21"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 6904,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 6878,
+    "mbc": 6358,
+    "ttps": 5955
+   },
+   "dup_identical": 3096,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-08-03T22:17:33+00:00",
+   "min_time": "2024-07-28T00:01:52+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 5995,
+    "family_confidence": 5995
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-08-03",
+    "file_type": "Win64",
+    "name": "2024-07-28_2024-08-03_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-07-28"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 7322,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 7308,
+    "mbc": 6895,
+    "ttps": 6543
+   },
+   "dup_identical": 2678,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-08-10T23:59:42+00:00",
+   "min_time": "2024-08-04T00:02:13+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6387,
+    "family_confidence": 6387
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-08-10",
+    "file_type": "Win64",
+    "name": "2024-08-04_2024-08-10_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-08-04"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 7946,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 7929,
+    "mbc": 7423,
+    "ttps": 7176
+   },
+   "dup_identical": 2054,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-08-17T23:57:46+00:00",
+   "min_time": "2024-08-11T00:00:21+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6535,
+    "family_confidence": 6535
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-08-17",
+    "file_type": "Win64",
+    "name": "2024-08-11_2024-08-17_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-08-11"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8325,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8310,
+    "mbc": 7779,
+    "ttps": 7373
+   },
+   "dup_identical": 1675,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-08-24T23:56:27+00:00",
+   "min_time": "2024-08-18T00:00:01+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6468,
+    "family_confidence": 6468
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-08-24",
+    "file_type": "Win64",
+    "name": "2024-08-18_2024-08-24_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-08-18"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8140,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8125,
+    "mbc": 7736,
+    "ttps": 7299
+   },
+   "dup_identical": 1860,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-08-31T23:59:46+00:00",
+   "min_time": "2024-08-25T00:06:41+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6383,
+    "family_confidence": 6383
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-08-31",
+    "file_type": "Win64",
+    "name": "2024-08-25_2024-08-31_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-08-25"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 7779,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 7761,
+    "mbc": 7286,
+    "ttps": 6933
+   },
+   "dup_identical": 2221,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-09-07T23:59:46+00:00",
+   "min_time": "2024-09-01T00:02:51+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6359,
+    "family_confidence": 6359
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-09-07",
+    "file_type": "Win64",
+    "name": "2024-09-01_2024-09-07_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-09-01"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 7042,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 7019,
+    "mbc": 6591,
+    "ttps": 6276
+   },
+   "dup_identical": 2958,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-09-14T23:56:52+00:00",
+   "min_time": "2024-09-08T00:01:53+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6036,
+    "family_confidence": 6036
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-09-14",
+    "file_type": "Win64",
+    "name": "2024-09-08_2024-09-14_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-09-08"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 7968,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 7940,
+    "mbc": 7435,
+    "ttps": 7104
+   },
+   "dup_identical": 2032,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-09-21T23:59:41+00:00",
+   "min_time": "2024-09-15T00:00:22+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6381,
+    "family_confidence": 6381
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-09-21",
+    "file_type": "Win64",
+    "name": "2024-09-15_2024-09-21_Win64_train.jsonl",
+    "split": "train",
+    "start": "2024-09-15"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 7972,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 7958,
+    "mbc": 7508,
+    "ttps": 7225
+   },
+   "dup_identical": 2028,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-09-28T23:59:48+00:00",
+   "min_time": "2024-09-22T00:01:48+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6284,
+    "family_confidence": 6284
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-09-28",
+    "file_type": "Win64",
+    "name": "2024-09-22_2024-09-28_Win64_test.jsonl",
+    "split": "test",
+    "start": "2024-09-22"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8151,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8131,
+    "mbc": 7661,
+    "ttps": 7272
+   },
+   "dup_identical": 1849,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-10-05T23:58:35+00:00",
+   "min_time": "2024-09-29T00:02:42+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6344,
+    "family_confidence": 6344
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-10-05",
+    "file_type": "Win64",
+    "name": "2024-09-29_2024-10-05_Win64_test.jsonl",
+    "split": "test",
+    "start": "2024-09-29"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8085,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8067,
+    "mbc": 7549,
+    "ttps": 7191
+   },
+   "dup_identical": 1915,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-10-12T23:58:03+00:00",
+   "min_time": "2024-10-05T05:15:03+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6473,
+    "family_confidence": 6473
+   },
+   "outside_week": 3,
+   "outside_week_days": {
+    "-1": 3
+   },
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-10-12",
+    "file_type": "Win64",
+    "name": "2024-10-06_2024-10-12_Win64_test.jsonl",
+    "split": "test",
+    "start": "2024-10-06"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8395,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8376,
+    "mbc": 7800,
+    "ttps": 7559
+   },
+   "dup_identical": 1605,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-10-19T23:59:30+00:00",
+   "min_time": "2024-10-12T11:33:45+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6333,
+    "family_confidence": 6333
+   },
+   "outside_week": 3,
+   "outside_week_days": {
+    "-1": 3
+   },
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-10-19",
+    "file_type": "Win64",
+    "name": "2024-10-13_2024-10-19_Win64_test.jsonl",
+    "split": "test",
+    "start": "2024-10-13"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8724,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8706,
+    "mbc": 8150,
+    "ttps": 7992
+   },
+   "dup_identical": 1276,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-10-26T23:59:23+00:00",
+   "min_time": "2024-10-19T18:41:46+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6313,
+    "family_confidence": 6313
+   },
+   "outside_week": 1,
+   "outside_week_days": {
+    "-1": 1
+   },
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-10-26",
+    "file_type": "Win64",
+    "name": "2024-10-20_2024-10-26_Win64_test.jsonl",
+    "split": "test",
+    "start": "2024-10-20"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8708,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8696,
+    "mbc": 8122,
+    "ttps": 7929
+   },
+   "dup_identical": 1292,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-11-02T23:56:42+00:00",
+   "min_time": "2024-10-26T04:26:57+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 5768,
+    "family_confidence": 5768
+   },
+   "outside_week": 1,
+   "outside_week_days": {
+    "-1": 1
+   },
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-11-02",
+    "file_type": "Win64",
+    "name": "2024-10-27_2024-11-02_Win64_test.jsonl",
+    "split": "test",
+    "start": "2024-10-27"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8624,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8611,
+    "mbc": 8097,
+    "ttps": 7824
+   },
+   "dup_identical": 1376,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-11-09T23:59:00+00:00",
+   "min_time": "2024-11-02T08:31:54+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 5878,
+    "family_confidence": 5878
+   },
+   "outside_week": 1,
+   "outside_week_days": {
+    "-1": 1
+   },
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-11-09",
+    "file_type": "Win64",
+    "name": "2024-11-03_2024-11-09_Win64_test.jsonl",
+    "split": "test",
+    "start": "2024-11-03"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8671,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8653,
+    "mbc": 8155,
+    "ttps": 7986
+   },
+   "dup_identical": 1329,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-11-16T23:58:12+00:00",
+   "min_time": "2024-11-10T00:00:16+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 5989,
+    "family_confidence": 5989
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-11-16",
+    "file_type": "Win64",
+    "name": "2024-11-10_2024-11-16_Win64_test.jsonl",
+    "split": "test",
+    "start": "2024-11-10"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8751,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8739,
+    "mbc": 8229,
+    "ttps": 8095
+   },
+   "dup_identical": 1249,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-11-23T23:57:35+00:00",
+   "min_time": "2024-11-17T00:02:58+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 5670,
+    "family_confidence": 5670
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-11-23",
+    "file_type": "Win64",
+    "name": "2024-11-17_2024-11-23_Win64_test.jsonl",
+    "split": "test",
+    "start": "2024-11-17"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8693,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8685,
+    "mbc": 8163,
+    "ttps": 7995
+   },
+   "dup_identical": 1307,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-11-30T23:54:10+00:00",
+   "min_time": "2024-11-23T07:29:33+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 5746,
+    "family_confidence": 5746
+   },
+   "outside_week": 1,
+   "outside_week_days": {
+    "-1": 1
+   },
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-11-30",
+    "file_type": "Win64",
+    "name": "2024-11-24_2024-11-30_Win64_test.jsonl",
+    "split": "test",
+    "start": "2024-11-24"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8643,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8632,
+    "mbc": 8187,
+    "ttps": 7898
+   },
+   "dup_identical": 1357,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-12-07T23:59:08+00:00",
+   "min_time": "2024-12-01T00:00:27+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 5877,
+    "family_confidence": 5877
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-12-07",
+    "file_type": "Win64",
+    "name": "2024-12-01_2024-12-07_Win64_test.jsonl",
+    "split": "test",
+    "start": "2024-12-01"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 8779,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 8756,
+    "mbc": 8382,
+    "ttps": 8216
+   },
+   "dup_identical": 1221,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 10000,
+   "labels": {
+    "0": 5000,
+    "1": 5000
+   },
+   "max_time": "2024-12-14T23:59:37+00:00",
+   "min_time": "2024-12-07T06:29:51+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 6052,
+    "family_confidence": 6052
+   },
+   "outside_week": 3,
+   "outside_week_days": {
+    "-1": 3
+   },
+   "raw_rows": 20000,
+   "record_file_types": {
+    "Win64": 10000
+   },
+   "rows": 10000,
+   "time_types": {
+    "int": 10000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-12-14",
+    "file_type": "Win64",
+    "name": "2024-12-08_2024-12-14_Win64_test.jsonl",
+    "split": "test",
+    "start": "2024-12-08"
+   }
+  }
+ ]
+}

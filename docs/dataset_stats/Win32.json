@@ -1,0 +1,2810 @@
+{
+ "feature_dim": 2568,
+ "file_type": "Win32",
+ "flags": [
+  "train: raw JSONL has 3,120,000 rows but 1,560,000 unique sha256 (1,560,000 repeated records; 302,803 byte-identical, 1,257,197 differ only in caps/ttps/mbc, 0 differ elsewhere, 0 label conflicts)",
+  "test: raw JSONL has 720,000 rows but 360,000 unique sha256 (360,000 repeated records; 89,087 byte-identical, 270,913 differ only in caps/ttps/mbc, 0 differ elsewhere, 0 label conflicts)",
+  "test: 6 files appear in more than one week (359,994 unique sha256 across the split)",
+  "test: 23 rows have first_submission_date outside their weekly file's date range (days outside: -1: 23)"
+ ],
+ "generated_at": "2026-11-19 06:50 UTC",
+ "nonconstant_features_in_sample": 2510,
+ "provenance": [
+  "measured in: Kaggle notebook; repo commit `848a6284c76e39a3165829936bc140b04f0cd7cf (code bundle)`; feature sample 100 train rows/week",
+  "`Win32_test.zip` sha256 `c05f6562dee3ace4195087be918eb00181e33bc31464c671fb5ba00c9dd5dfdb`",
+  "`Win32_train.zip` sha256 `6cf9dea847960115f65d405d38b6b09d38c87225c8288dafedf00fed2512b1d4`"
+ ],
+ "sample_rows": 5200,
+ "schema_version": 1,
+ "splits": {
+  "test": {
+   "benign": 180000,
+   "dup_differ_only_ignored": 270913,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 270304,
+    "mbc": 254678,
+    "ttps": 248444
+   },
+   "dup_identical": 89087,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 360000,
+   "file_type": "Win32",
+   "first_week": "2024-09-22..2024-09-28",
+   "labels": {
+    "0": 180000,
+    "1": 180000
+   },
+   "last_week": "2024-12-08..2024-12-14",
+   "malicious": 180000,
+   "max_time": "2024-12-14T23:57:28+00:00",
+   "min_time": "2024-09-22T00:00:02+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 200083,
+    "family_confidence": 200083
+   },
+   "outside_week": 23,
+   "outside_week_days": {
+    "-1": 23
+   },
+   "raw_rows": 720000,
+   "rows": 360000,
+   "split": "test",
+   "time_types": {
+    "int": 360000
+   },
+   "unique_ids": 359994,
+   "unlabeled": 0,
+   "unparsable_time": 0,
+   "weeks": 12
+  },
+  "train": {
+   "benign": 780000,
+   "dup_differ_only_ignored": 1257197,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 1253580,
+    "mbc": 1185899,
+    "ttps": 1140062
+   },
+   "dup_identical": 302803,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 1560000,
+   "file_type": "Win32",
+   "first_week": "2023-09-24..2023-09-30",
+   "labels": {
+    "0": 780000,
+    "1": 780000
+   },
+   "last_week": "2024-09-15..2024-09-21",
+   "malicious": 780000,
+   "max_time": "2024-09-21T23:58:43+00:00",
+   "min_time": "2023-09-24T00:00:10+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 874292,
+    "family_confidence": 874292
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 3120000,
+   "rows": 1560000,
+   "split": "train",
+   "time_types": {
+    "int": 1560000
+   },
+   "unique_ids": 1560000,
+   "unlabeled": 0,
+   "unparsable_time": 0,
+   "weeks": 52
+  }
+ },
+ "train_test_overlap": 0,
+ "weekly": [
+  {
+   "dup_differ_only_ignored": 24136,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 24025,
+    "mbc": 22639,
+    "ttps": 21999
+   },
+   "dup_identical": 5864,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2023-09-30T23:59:43+00:00",
+   "min_time": "2023-09-24T00:00:10+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 18308,
+    "family_confidence": 18308
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-09-30",
+    "file_type": "Win32",
+    "name": "2023-09-24_2023-09-30_Win32_train.jsonl",
+    "split": "train",
+    "start": "2023-09-24"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 24214,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 24089,
+    "mbc": 22982,
+    "ttps": 21792
+   },
+   "dup_identical": 5786,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2023-10-06T23:59:51+00:00",
+   "min_time": "2023-10-01T00:00:36+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 15629,
+    "family_confidence": 15629
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-10-07",
+    "file_type": "Win32",
+    "name": "2023-10-01_2023-10-07_Win32_train.jsonl",
+    "split": "train",
+    "start": "2023-10-01"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 23683,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 23588,
+    "mbc": 22237,
+    "ttps": 21512
+   },
+   "dup_identical": 6317,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2023-10-14T12:57:02+00:00",
+   "min_time": "2023-10-08T00:00:15+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 17498,
+    "family_confidence": 17498
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-10-14",
+    "file_type": "Win32",
+    "name": "2023-10-08_2023-10-14_Win32_train.jsonl",
+    "split": "train",
+    "start": "2023-10-08"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 23016,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 22935,
+    "mbc": 21618,
+    "ttps": 21137
+   },
+   "dup_identical": 6984,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2023-10-21T23:59:57+00:00",
+   "min_time": "2023-10-15T00:00:05+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16982,
+    "family_confidence": 16982
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-10-21",
+    "file_type": "Win32",
+    "name": "2023-10-15_2023-10-21_Win32_train.jsonl",
+    "split": "train",
+    "start": "2023-10-15"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 23127,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 23034,
+    "mbc": 21789,
+    "ttps": 21194
+   },
+   "dup_identical": 6873,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2023-10-28T23:59:03+00:00",
+   "min_time": "2023-10-22T00:00:05+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 17491,
+    "family_confidence": 17491
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-10-28",
+    "file_type": "Win32",
+    "name": "2023-10-22_2023-10-28_Win32_train.jsonl",
+    "split": "train",
+    "start": "2023-10-22"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 24147,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 24059,
+    "mbc": 22721,
+    "ttps": 22250
+   },
+   "dup_identical": 5853,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2023-11-04T23:56:35+00:00",
+   "min_time": "2023-10-29T00:00:00+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16065,
+    "family_confidence": 16065
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-11-04",
+    "file_type": "Win32",
+    "name": "2023-10-29_2023-11-04_Win32_train.jsonl",
+    "split": "train",
+    "start": "2023-10-29"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 21966,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 21888,
+    "mbc": 20480,
+    "ttps": 19747
+   },
+   "dup_identical": 8034,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2023-11-11T23:58:58+00:00",
+   "min_time": "2023-11-05T00:00:38+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16470,
+    "family_confidence": 16470
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-11-11",
+    "file_type": "Win32",
+    "name": "2023-11-05_2023-11-11_Win32_train.jsonl",
+    "split": "train",
+    "start": "2023-11-05"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 23168,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 23106,
+    "mbc": 21733,
+    "ttps": 20946
+   },
+   "dup_identical": 6832,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2023-11-18T23:41:32+00:00",
+   "min_time": "2023-11-12T00:00:13+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 18726,
+    "family_confidence": 18726
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-11-18",
+    "file_type": "Win32",
+    "name": "2023-11-12_2023-11-18_Win32_train.jsonl",
+    "split": "train",
+    "start": "2023-11-12"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 23677,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 23583,
+    "mbc": 21814,
+    "ttps": 20830
+   },
+   "dup_identical": 6323,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2023-11-25T23:59:36+00:00",
+   "min_time": "2023-11-19T00:01:56+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 19404,
+    "family_confidence": 19404
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-11-25",
+    "file_type": "Win32",
+    "name": "2023-11-19_2023-11-25_Win32_train.jsonl",
+    "split": "train",
+    "start": "2023-11-19"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 23992,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 23928,
+    "mbc": 22741,
+    "ttps": 21795
+   },
+   "dup_identical": 6008,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2023-12-02T23:59:56+00:00",
+   "min_time": "2023-11-26T00:00:22+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16221,
+    "family_confidence": 16221
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-12-02",
+    "file_type": "Win32",
+    "name": "2023-11-26_2023-12-02_Win32_train.jsonl",
+    "split": "train",
+    "start": "2023-11-26"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 23766,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 23707,
+    "mbc": 22486,
+    "ttps": 21504
+   },
+   "dup_identical": 6234,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2023-12-09T23:59:57+00:00",
+   "min_time": "2023-12-03T00:00:22+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 15676,
+    "family_confidence": 15676
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-12-09",
+    "file_type": "Win32",
+    "name": "2023-12-03_2023-12-09_Win32_train.jsonl",
+    "split": "train",
+    "start": "2023-12-03"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 23458,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 23412,
+    "mbc": 22402,
+    "ttps": 21455
+   },
+   "dup_identical": 6542,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2023-12-16T23:59:46+00:00",
+   "min_time": "2023-12-10T00:01:40+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 15728,
+    "family_confidence": 15728
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-12-16",
+    "file_type": "Win32",
+    "name": "2023-12-10_2023-12-16_Win32_train.jsonl",
+    "split": "train",
+    "start": "2023-12-10"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 23749,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 23690,
+    "mbc": 22541,
+    "ttps": 21528
+   },
+   "dup_identical": 6251,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2023-12-23T23:59:54+00:00",
+   "min_time": "2023-12-17T00:00:12+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 15679,
+    "family_confidence": 15679
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-12-23",
+    "file_type": "Win32",
+    "name": "2023-12-17_2023-12-23_Win32_train.jsonl",
+    "split": "train",
+    "start": "2023-12-17"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 24411,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 24349,
+    "mbc": 23358,
+    "ttps": 22275
+   },
+   "dup_identical": 5589,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2023-12-30T23:58:54+00:00",
+   "min_time": "2023-12-24T00:00:19+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 15741,
+    "family_confidence": 15741
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-12-30",
+    "file_type": "Win32",
+    "name": "2023-12-24_2023-12-30_Win32_train.jsonl",
+    "split": "train",
+    "start": "2023-12-24"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 23799,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 23744,
+    "mbc": 22416,
+    "ttps": 21308
+   },
+   "dup_identical": 6201,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-01-06T23:59:58+00:00",
+   "min_time": "2023-12-31T00:03:18+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 15709,
+    "family_confidence": 15709
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-01-06",
+    "file_type": "Win32",
+    "name": "2023-12-31_2024-01-06_Win32_train.jsonl",
+    "split": "train",
+    "start": "2023-12-31"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 24114,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 24055,
+    "mbc": 22363,
+    "ttps": 20929
+   },
+   "dup_identical": 5886,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-01-13T22:53:53+00:00",
+   "min_time": "2024-01-07T00:00:28+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 15551,
+    "family_confidence": 15551
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-01-13",
+    "file_type": "Win32",
+    "name": "2024-01-07_2024-01-13_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-01-07"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 23514,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 23432,
+    "mbc": 22092,
+    "ttps": 20559
+   },
+   "dup_identical": 6486,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-01-20T23:59:36+00:00",
+   "min_time": "2024-01-14T00:00:06+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 15642,
+    "family_confidence": 15642
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-01-20",
+    "file_type": "Win32",
+    "name": "2024-01-14_2024-01-20_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-01-14"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 22591,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 22486,
+    "mbc": 21426,
+    "ttps": 19956
+   },
+   "dup_identical": 7409,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-01-27T16:22:22+00:00",
+   "min_time": "2024-01-21T00:00:12+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 15583,
+    "family_confidence": 15583
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-01-27",
+    "file_type": "Win32",
+    "name": "2024-01-21_2024-01-27_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-01-21"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 22676,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 22589,
+    "mbc": 21461,
+    "ttps": 20109
+   },
+   "dup_identical": 7324,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-02-03T23:59:15+00:00",
+   "min_time": "2024-01-28T00:00:16+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 15842,
+    "family_confidence": 15842
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-02-03",
+    "file_type": "Win32",
+    "name": "2024-01-28_2024-02-03_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-01-28"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 23146,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 23074,
+    "mbc": 21651,
+    "ttps": 19912
+   },
+   "dup_identical": 6854,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-02-10T23:58:58+00:00",
+   "min_time": "2024-02-04T00:00:22+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16607,
+    "family_confidence": 16607
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-02-10",
+    "file_type": "Win32",
+    "name": "2024-02-04_2024-02-10_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-02-04"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 24425,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 24363,
+    "mbc": 23212,
+    "ttps": 21780
+   },
+   "dup_identical": 5575,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-02-17T23:59:47+00:00",
+   "min_time": "2024-02-11T00:00:11+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16900,
+    "family_confidence": 16900
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-02-17",
+    "file_type": "Win32",
+    "name": "2024-02-11_2024-02-17_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-02-11"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 24995,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 24873,
+    "mbc": 23663,
+    "ttps": 22851
+   },
+   "dup_identical": 5005,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-02-24T23:59:15+00:00",
+   "min_time": "2024-02-18T00:00:55+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16831,
+    "family_confidence": 16831
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-02-24",
+    "file_type": "Win32",
+    "name": "2024-02-18_2024-02-24_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-02-18"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 22679,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 22577,
+    "mbc": 21460,
+    "ttps": 20796
+   },
+   "dup_identical": 7321,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-03-02T23:59:55+00:00",
+   "min_time": "2024-02-25T00:00:00+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16449,
+    "family_confidence": 16449
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-03-02",
+    "file_type": "Win32",
+    "name": "2024-02-25_2024-03-02_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-02-25"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 23289,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 23205,
+    "mbc": 21741,
+    "ttps": 21107
+   },
+   "dup_identical": 6711,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-03-09T23:57:50+00:00",
+   "min_time": "2024-03-03T00:01:53+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16725,
+    "family_confidence": 16725
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-03-09",
+    "file_type": "Win32",
+    "name": "2024-03-03_2024-03-09_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-03-03"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 23383,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 23316,
+    "mbc": 22037,
+    "ttps": 20485
+   },
+   "dup_identical": 6617,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-03-16T23:59:58+00:00",
+   "min_time": "2024-03-10T00:00:30+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16754,
+    "family_confidence": 16754
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-03-16",
+    "file_type": "Win32",
+    "name": "2024-03-10_2024-03-16_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-03-10"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 23835,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 23755,
+    "mbc": 22605,
+    "ttps": 21192
+   },
+   "dup_identical": 6165,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-03-23T23:59:53+00:00",
+   "min_time": "2024-03-17T00:02:20+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16722,
+    "family_confidence": 16722
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-03-23",
+    "file_type": "Win32",
+    "name": "2024-03-17_2024-03-23_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-03-17"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 24555,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 24473,
+    "mbc": 23267,
+    "ttps": 22558
+   },
+   "dup_identical": 5445,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-03-30T23:59:53+00:00",
+   "min_time": "2024-03-24T00:00:15+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16486,
+    "family_confidence": 16486
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-03-30",
+    "file_type": "Win32",
+    "name": "2024-03-24_2024-03-30_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-03-24"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 25360,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 25271,
+    "mbc": 23807,
+    "ttps": 22909
+   },
+   "dup_identical": 4640,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-04-06T23:59:58+00:00",
+   "min_time": "2024-03-31T00:00:01+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 15542,
+    "family_confidence": 15542
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-04-06",
+    "file_type": "Win32",
+    "name": "2024-03-31_2024-04-06_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-03-31"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 24528,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 24427,
+    "mbc": 23124,
+    "ttps": 22389
+   },
+   "dup_identical": 5472,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-04-13T23:59:50+00:00",
+   "min_time": "2024-04-07T00:00:28+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16618,
+    "family_confidence": 16618
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-04-13",
+    "file_type": "Win32",
+    "name": "2024-04-07_2024-04-13_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-04-07"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 25196,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 25125,
+    "mbc": 23764,
+    "ttps": 23085
+   },
+   "dup_identical": 4804,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-04-20T23:58:46+00:00",
+   "min_time": "2024-04-14T00:00:43+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16546,
+    "family_confidence": 16546
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-04-20",
+    "file_type": "Win32",
+    "name": "2024-04-14_2024-04-20_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-04-14"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 25538,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 25445,
+    "mbc": 24090,
+    "ttps": 23462
+   },
+   "dup_identical": 4462,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-04-27T23:59:53+00:00",
+   "min_time": "2024-04-21T00:01:31+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 17119,
+    "family_confidence": 17119
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-04-27",
+    "file_type": "Win32",
+    "name": "2024-04-21_2024-04-27_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-04-21"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 24734,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 24664,
+    "mbc": 23253,
+    "ttps": 22787
+   },
+   "dup_identical": 5266,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-05-04T23:58:18+00:00",
+   "min_time": "2024-04-28T00:00:18+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16643,
+    "family_confidence": 16643
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-05-04",
+    "file_type": "Win32",
+    "name": "2024-04-28_2024-05-04_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-04-28"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 24104,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 24033,
+    "mbc": 21807,
+    "ttps": 21111
+   },
+   "dup_identical": 5896,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-05-11T23:59:53+00:00",
+   "min_time": "2024-05-05T00:00:18+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 18556,
+    "family_confidence": 18556
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-05-11",
+    "file_type": "Win32",
+    "name": "2024-05-05_2024-05-11_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-05-05"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 24549,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 24499,
+    "mbc": 23440,
+    "ttps": 22883
+   },
+   "dup_identical": 5451,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-05-18T23:59:08+00:00",
+   "min_time": "2024-05-12T00:00:01+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16645,
+    "family_confidence": 16645
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-05-18",
+    "file_type": "Win32",
+    "name": "2024-05-12_2024-05-18_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-05-12"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 24523,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 24467,
+    "mbc": 23234,
+    "ttps": 22396
+   },
+   "dup_identical": 5477,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-05-25T23:58:50+00:00",
+   "min_time": "2024-05-19T00:01:15+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 17574,
+    "family_confidence": 17574
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-05-25",
+    "file_type": "Win32",
+    "name": "2024-05-19_2024-05-25_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-05-19"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 24352,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 24286,
+    "mbc": 22924,
+    "ttps": 22234
+   },
+   "dup_identical": 5648,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-06-01T23:59:47+00:00",
+   "min_time": "2024-05-26T00:00:41+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 17664,
+    "family_confidence": 17664
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-06-01",
+    "file_type": "Win32",
+    "name": "2024-05-26_2024-06-01_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-05-26"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 25030,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 24967,
+    "mbc": 23379,
+    "ttps": 22638
+   },
+   "dup_identical": 4970,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-06-08T22:59:58+00:00",
+   "min_time": "2024-06-02T00:00:07+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16923,
+    "family_confidence": 16923
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-06-08",
+    "file_type": "Win32",
+    "name": "2024-06-02_2024-06-08_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-06-02"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 24655,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 24623,
+    "mbc": 23492,
+    "ttps": 22844
+   },
+   "dup_identical": 5345,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-06-15T23:57:38+00:00",
+   "min_time": "2024-06-09T00:00:00+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16679,
+    "family_confidence": 16679
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-06-15",
+    "file_type": "Win32",
+    "name": "2024-06-09_2024-06-15_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-06-09"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 25188,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 25148,
+    "mbc": 23878,
+    "ttps": 22908
+   },
+   "dup_identical": 4812,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-06-22T23:59:42+00:00",
+   "min_time": "2024-06-16T00:00:28+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 17056,
+    "family_confidence": 17056
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-06-22",
+    "file_type": "Win32",
+    "name": "2024-06-16_2024-06-22_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-06-16"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 25399,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 25350,
+    "mbc": 23913,
+    "ttps": 22933
+   },
+   "dup_identical": 4601,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-06-29T23:59:36+00:00",
+   "min_time": "2024-06-23T00:00:02+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 17504,
+    "family_confidence": 17504
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-06-29",
+    "file_type": "Win32",
+    "name": "2024-06-23_2024-06-29_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-06-23"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 25520,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 25498,
+    "mbc": 24452,
+    "ttps": 23643
+   },
+   "dup_identical": 4480,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-07-06T23:59:42+00:00",
+   "min_time": "2024-06-30T00:00:08+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16687,
+    "family_confidence": 16687
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-07-06",
+    "file_type": "Win32",
+    "name": "2024-06-30_2024-07-06_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-06-30"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 25009,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 24968,
+    "mbc": 23907,
+    "ttps": 23161
+   },
+   "dup_identical": 4991,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-07-13T23:59:36+00:00",
+   "min_time": "2024-07-07T00:00:07+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16189,
+    "family_confidence": 16189
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-07-13",
+    "file_type": "Win32",
+    "name": "2024-07-07_2024-07-13_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-07-07"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 25345,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 25302,
+    "mbc": 24178,
+    "ttps": 23323
+   },
+   "dup_identical": 4655,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-07-20T23:58:56+00:00",
+   "min_time": "2024-07-14T00:00:00+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16795,
+    "family_confidence": 16795
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-07-20",
+    "file_type": "Win32",
+    "name": "2024-07-14_2024-07-20_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-07-14"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 25322,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 25274,
+    "mbc": 24180,
+    "ttps": 23350
+   },
+   "dup_identical": 4678,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-07-27T23:59:38+00:00",
+   "min_time": "2024-07-21T00:01:28+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16412,
+    "family_confidence": 16412
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-07-27",
+    "file_type": "Win32",
+    "name": "2024-07-21_2024-07-27_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-07-21"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 25748,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 25701,
+    "mbc": 24448,
+    "ttps": 23730
+   },
+   "dup_identical": 4252,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-08-03T22:59:58+00:00",
+   "min_time": "2024-07-28T00:00:00+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16902,
+    "family_confidence": 16902
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-08-03",
+    "file_type": "Win32",
+    "name": "2024-07-28_2024-08-03_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-07-28"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 24895,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 24852,
+    "mbc": 23428,
+    "ttps": 22680
+   },
+   "dup_identical": 5105,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-08-10T23:59:43+00:00",
+   "min_time": "2024-08-04T00:00:12+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 17093,
+    "family_confidence": 17093
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-08-10",
+    "file_type": "Win32",
+    "name": "2024-08-04_2024-08-10_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-08-04"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 25155,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 25114,
+    "mbc": 23791,
+    "ttps": 22962
+   },
+   "dup_identical": 4845,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-08-17T23:59:58+00:00",
+   "min_time": "2024-08-11T00:00:03+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 17033,
+    "family_confidence": 17033
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-08-17",
+    "file_type": "Win32",
+    "name": "2024-08-11_2024-08-17_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-08-11"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 23301,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 23253,
+    "mbc": 22060,
+    "ttps": 21408
+   },
+   "dup_identical": 6699,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-08-24T23:59:35+00:00",
+   "min_time": "2024-08-18T00:00:07+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 17386,
+    "family_confidence": 17386
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-08-24",
+    "file_type": "Win32",
+    "name": "2024-08-18_2024-08-24_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-08-18"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 24525,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 24437,
+    "mbc": 23206,
+    "ttps": 22462
+   },
+   "dup_identical": 5475,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-08-31T23:59:56+00:00",
+   "min_time": "2024-08-25T00:01:31+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 18799,
+    "family_confidence": 18799
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-08-31",
+    "file_type": "Win32",
+    "name": "2024-08-25_2024-08-31_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-08-25"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 25537,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 25491,
+    "mbc": 24057,
+    "ttps": 23412
+   },
+   "dup_identical": 4463,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-09-07T23:59:45+00:00",
+   "min_time": "2024-09-01T00:00:02+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 18632,
+    "family_confidence": 18632
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-09-07",
+    "file_type": "Win32",
+    "name": "2024-09-01_2024-09-07_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-09-01"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 23764,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 23687,
+    "mbc": 21986,
+    "ttps": 21356
+   },
+   "dup_identical": 6236,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-09-14T23:57:23+00:00",
+   "min_time": "2024-09-08T00:00:12+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 17114,
+    "family_confidence": 17114
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-09-14",
+    "file_type": "Win32",
+    "name": "2024-09-08_2024-09-14_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-09-08"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 22409,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 22363,
+    "mbc": 21166,
+    "ttps": 20490
+   },
+   "dup_identical": 7591,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-09-21T23:58:43+00:00",
+   "min_time": "2024-09-15T00:00:11+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16762,
+    "family_confidence": 16762
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-09-21",
+    "file_type": "Win32",
+    "name": "2024-09-15_2024-09-21_Win32_train.jsonl",
+    "split": "train",
+    "start": "2024-09-15"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 20316,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 20279,
+    "mbc": 19484,
+    "ttps": 18991
+   },
+   "dup_identical": 9684,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-09-28T23:59:45+00:00",
+   "min_time": "2024-09-22T00:00:02+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16433,
+    "family_confidence": 16433
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-09-28",
+    "file_type": "Win32",
+    "name": "2024-09-22_2024-09-28_Win32_test.jsonl",
+    "split": "test",
+    "start": "2024-09-22"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 21144,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 21117,
+    "mbc": 20022,
+    "ttps": 19603
+   },
+   "dup_identical": 8856,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-10-05T23:59:55+00:00",
+   "min_time": "2024-09-29T00:00:06+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16628,
+    "family_confidence": 16628
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-10-05",
+    "file_type": "Win32",
+    "name": "2024-09-29_2024-10-05_Win32_test.jsonl",
+    "split": "test",
+    "start": "2024-09-29"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 21643,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 21598,
+    "mbc": 19853,
+    "ttps": 19400
+   },
+   "dup_identical": 8357,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-10-12T23:59:06+00:00",
+   "min_time": "2024-10-06T00:00:32+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 17391,
+    "family_confidence": 17391
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-10-12",
+    "file_type": "Win32",
+    "name": "2024-10-06_2024-10-12_Win32_test.jsonl",
+    "split": "test",
+    "start": "2024-10-06"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 22675,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 22637,
+    "mbc": 21413,
+    "ttps": 20950
+   },
+   "dup_identical": 7325,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-10-19T23:59:25+00:00",
+   "min_time": "2024-10-12T14:39:40+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16646,
+    "family_confidence": 16646
+   },
+   "outside_week": 3,
+   "outside_week_days": {
+    "-1": 3
+   },
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-10-19",
+    "file_type": "Win32",
+    "name": "2024-10-13_2024-10-19_Win32_test.jsonl",
+    "split": "test",
+    "start": "2024-10-13"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 22083,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 22017,
+    "mbc": 20733,
+    "ttps": 20438
+   },
+   "dup_identical": 7917,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-10-26T23:59:12+00:00",
+   "min_time": "2024-10-19T08:00:07+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16693,
+    "family_confidence": 16693
+   },
+   "outside_week": 2,
+   "outside_week_days": {
+    "-1": 2
+   },
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-10-26",
+    "file_type": "Win32",
+    "name": "2024-10-20_2024-10-26_Win32_test.jsonl",
+    "split": "test",
+    "start": "2024-10-20"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 22698,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 22607,
+    "mbc": 20804,
+    "ttps": 20287
+   },
+   "dup_identical": 7302,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-11-02T23:59:58+00:00",
+   "min_time": "2024-10-26T14:38:37+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 17327,
+    "family_confidence": 17327
+   },
+   "outside_week": 2,
+   "outside_week_days": {
+    "-1": 2
+   },
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-11-02",
+    "file_type": "Win32",
+    "name": "2024-10-27_2024-11-02_Win32_test.jsonl",
+    "split": "test",
+    "start": "2024-10-27"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 22831,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 22781,
+    "mbc": 21505,
+    "ttps": 21125
+   },
+   "dup_identical": 7169,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-11-09T23:59:06+00:00",
+   "min_time": "2024-11-02T00:30:12+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16318,
+    "family_confidence": 16318
+   },
+   "outside_week": 12,
+   "outside_week_days": {
+    "-1": 12
+   },
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-11-09",
+    "file_type": "Win32",
+    "name": "2024-11-03_2024-11-09_Win32_test.jsonl",
+    "split": "test",
+    "start": "2024-11-03"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 22704,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 22654,
+    "mbc": 21149,
+    "ttps": 20633
+   },
+   "dup_identical": 7296,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-11-16T23:59:52+00:00",
+   "min_time": "2024-11-10T00:00:23+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16628,
+    "family_confidence": 16628
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-11-16",
+    "file_type": "Win32",
+    "name": "2024-11-10_2024-11-16_Win32_test.jsonl",
+    "split": "test",
+    "start": "2024-11-10"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 22404,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 22353,
+    "mbc": 21028,
+    "ttps": 20478
+   },
+   "dup_identical": 7596,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-11-23T23:59:56+00:00",
+   "min_time": "2024-11-17T00:01:31+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16594,
+    "family_confidence": 16594
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-11-23",
+    "file_type": "Win32",
+    "name": "2024-11-17_2024-11-23_Win32_test.jsonl",
+    "split": "test",
+    "start": "2024-11-17"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 23371,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 23325,
+    "mbc": 22120,
+    "ttps": 21476
+   },
+   "dup_identical": 6629,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-11-30T23:59:21+00:00",
+   "min_time": "2024-11-23T07:29:26+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16581,
+    "family_confidence": 16581
+   },
+   "outside_week": 2,
+   "outside_week_days": {
+    "-1": 2
+   },
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-11-30",
+    "file_type": "Win32",
+    "name": "2024-11-24_2024-11-30_Win32_test.jsonl",
+    "split": "test",
+    "start": "2024-11-24"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 24872,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 24814,
+    "mbc": 23702,
+    "ttps": 22887
+   },
+   "dup_identical": 5128,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-12-07T23:59:07+00:00",
+   "min_time": "2024-11-30T07:34:37+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16462,
+    "family_confidence": 16462
+   },
+   "outside_week": 1,
+   "outside_week_days": {
+    "-1": 1
+   },
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-12-07",
+    "file_type": "Win32",
+    "name": "2024-12-01_2024-12-07_Win32_test.jsonl",
+    "split": "test",
+    "start": "2024-12-01"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 24172,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 24122,
+    "mbc": 22865,
+    "ttps": 22176
+   },
+   "dup_identical": 5828,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 30000,
+   "labels": {
+    "0": 15000,
+    "1": 15000
+   },
+   "max_time": "2024-12-14T23:57:28+00:00",
+   "min_time": "2024-12-07T07:21:20+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 16382,
+    "family_confidence": 16382
+   },
+   "outside_week": 1,
+   "outside_week_days": {
+    "-1": 1
+   },
+   "raw_rows": 60000,
+   "record_file_types": {
+    "Win32": 30000
+   },
+   "rows": 30000,
+   "time_types": {
+    "int": 30000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-12-14",
+    "file_type": "Win32",
+    "name": "2024-12-08_2024-12-14_Win32_test.jsonl",
+    "split": "test",
+    "start": "2024-12-08"
+   }
+  }
+ ]
+}

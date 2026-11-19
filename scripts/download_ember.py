@@ -1,6 +1,7 @@
 """Download EMBER2024 feature-record zips, following the official thrember instructions.
 
-Official source: https://github.com/FutureComputing4AI/EMBER2024 (README + src/thrember/download.py).
+Official source: https://github.com/FutureComputing4AI/EMBER2024
+(README + src/thrember/download.py).
 thrember.download_dataset() calls
     hf_hub_download(repo_id="joyce8/EMBER2024", filename=f"{file_type}_{split}.zip",
                     repo_type="dataset")
@@ -18,6 +19,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -44,10 +46,12 @@ def main() -> None:
     log = get_logger("download_ember")
 
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
-    ap.add_argument("--file-types", nargs="+", default=cfg.dataset.file_types,
-                    choices=cfg.dataset.file_types)
+    ap.add_argument(
+        "--file-types", nargs="+", default=cfg.dataset.file_types, choices=cfg.dataset.file_types
+    )
     ap.add_argument("--splits", nargs="+", default=cfg.dataset.splits, choices=cfg.dataset.splits)
     ap.add_argument("--dest", type=Path, default=settings.raw_dir)
+    ap.add_argument("--retries", type=int, default=5)
     args = ap.parse_args()
 
     repo = cfg.dataset.hf_repo_id
@@ -72,15 +76,36 @@ def main() -> None:
             log.info("already_present", file=name)
             continue
         log.info("downloading", file=name, bytes=size)
-        # local_dir writes straight into dest (no duplicate copy in the global HF cache).
-        target = Path(hf_hub_download(repo_id=repo, filename=name,
-                                      repo_type=cfg.dataset.hf_repo_type, local_dir=dest))
+        for attempt in range(1, args.retries + 1):
+            try:
+                # local_dir writes straight into dest (no duplicate copy in the global HF cache).
+                # `make download` sets HF_HOME on the data volume, so the xet chunk cache
+                # survives failed attempts and container restarts; retries reuse chunks.
+                target = Path(
+                    hf_hub_download(
+                        repo_id=repo,
+                        filename=name,
+                        repo_type=cfg.dataset.hf_repo_type,
+                        local_dir=dest,
+                    )
+                )
+                break
+            except (OSError, RuntimeError) as exc:  # network drops surface as either
+                if attempt == args.retries:
+                    raise
+                wait = min(300, 15 * 2**attempt)
+                log.warning("download_retry", file=name, attempt=attempt, wait_s=wait, err=str(exc))
+                time.sleep(wait)
         got = sha256_of(target)
         if want_sha and got != want_sha:
             target.unlink()
             raise SystemExit(f"SHA-256 mismatch for {name}: got {got}, want {want_sha}")
-        manifest[name] = {"sha256": got, "bytes": target.stat().st_size,
-                          "repo": repo, "downloaded_at": datetime.now(UTC).isoformat()}
+        manifest[name] = {
+            "sha256": got,
+            "bytes": target.stat().st_size,
+            "repo": repo,
+            "downloaded_at": datetime.now(UTC).isoformat(),
+        }
         manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True))
         log.info("verified", file=name, sha256=got)
 

@@ -10,6 +10,10 @@ resolution-markers = [
 [options]
 exclude-newer = "2026-11-01T00:00:00Z"
 
+[manifest]
+constraints = [{ name = "signify", specifier = ">=0.8.1,<0.9" }]
+overrides = [{ name = "oscrypto", git = "https://github.com/wbond/oscrypto?rev=76bfdcb7285d856c44f8d0fbafe0ecca1c6d2f8b" }]
+
 [[package]]
 name = "annotated-types"
 version = "0.8.0"
@@ -555,13 +559,9 @@ wheels = [
 [[package]]
 name = "oscrypto"
 version = "1.3.0"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/wbond/oscrypto?rev=76bfdcb7285d856c44f8d0fbafe0ecca1c6d2f8b#76bfdcb7285d856c44f8d0fbafe0ecca1c6d2f8b" }
 dependencies = [
     { name = "asn1crypto" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/06/81/a7654e654a4b30eda06ef9ad8c1b45d1534bfd10b5c045d0c0f6b16fecd2/oscrypto-1.3.0.tar.gz", hash = "sha256:6f5fef59cb5b3708321db7cca56aed8ad7e662853351e7991fcf60ec606d47a4", size = 184590, upload-time = "2022-03-18T01:53:26.889Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/01/7c/fa07d3da2b6253eb8474be16eab2eadf670460e364ccc895ca7ff388ee30/oscrypto-1.3.0-py2.py3-none-any.whl", hash = "sha256:2b2f1d2d42ec152ca90ccb5682f3e051fb55986e1b170ebde472b133713e7085", size = 194553, upload-time = "2022-03-18T01:53:24.559Z" },
 ]
 
 [[package]]
@@ -1016,7 +1016,7 @@ dev = [
 
 [[package]]
 name = "signify"
-version = "0.9.3"
+version = "0.8.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "asn1crypto" },
@@ -1025,9 +1025,9 @@ dependencies = [
     { name = "oscrypto" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ab/23/11eb9cc568a3edddf50b5f45e066d061547439a4b62cb8e634e990a19686/signify-0.9.3.tar.gz", hash = "sha256:0310558c26c1425f904b21b4cba3477443e233128eea4117fd97fe1808227db0", size = 90541, upload-time = "2026-10-11T19:18:42.739Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/eb/c0/93d6f67f3e1125fb400cf734356fcf30daaac2cfb99555fa6a27031c9ded/signify-0.8.1.tar.gz", hash = "sha256:2c70c60caf676226fdde2009a03daf4a71063ec1d74263f1753e0c1a67c3b38a", size = 57346, upload-time = "2025-08-16T15:39:54.292Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4b/b0/f5abe7f68ecbbe71c143915af02ed47a6b675bbbd708f3baf73f4f07447c/signify-0.9.3-py3-none-any.whl", hash = "sha256:c67f327e34e480e18ff7c4d56f48703dc40e12bd77a4cccfebc0fd0e1fd4e3da", size = 88455, upload-time = "2026-10-11T19:18:41.495Z" },
+    { url = "https://files.pythonhosted.org/packages/4a/aa/b78ff461095706092cad649a3688f1f015878905c2ad088b05a89d615632/signify-0.8.1-py3-none-any.whl", hash = "sha256:1eae199d6cccb9b2745179acf80af71dbc09a1d13b62eb70213c8470e55a6ee1", size = 58411, upload-time = "2025-08-16T15:39:52.937Z" },
 ]
 
 [[package]]

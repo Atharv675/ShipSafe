@@ -61,16 +61,29 @@ class DatasetSpec(_Frozen):
     metadata_columns: list[str]
     label_column: str
     time_column: str
+    id_column: str
+    dup_ignored_columns: list[str]
     feature_blocks: list[str]
 
     def zip_name(self, file_type: str, split: str) -> str:
         return self.zip_name_template.format(file_type=file_type, split=split)
 
 
+class PlanAssumption(_Frozen):
+    """The dataset subset docs/BUILD_PLAN.md assumed; compared against measurements."""
+
+    file_type: str
+    train: int
+    test: int
+    train_weeks: int
+    test_weeks: int
+
+
 class DataConfig(_Frozen):
     dataset: DatasetSpec
     expected: ExpectedFigures
     min_benign_test_files: int
+    plan_assumption: PlanAssumption
 
 
 def load_yaml(path: Path) -> dict[str, Any]:

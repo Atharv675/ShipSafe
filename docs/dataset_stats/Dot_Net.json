@@ -1,0 +1,2816 @@
+{
+ "feature_dim": 2568,
+ "file_type": "Dot_Net",
+ "flags": [
+  "train: raw JSONL has 520,000 rows but 260,000 unique sha256 (260,000 repeated records; 3,784 byte-identical, 256,216 differ only in caps/ttps/mbc, 0 differ elsewhere, 0 label conflicts)",
+  "test: raw JSONL has 120,000 rows but 60,000 unique sha256 (60,000 repeated records; 827 byte-identical, 59,173 differ only in caps/ttps/mbc, 0 differ elsewhere, 0 label conflicts)",
+  "test: 47 files appear in more than one week (59,953 unique sha256 across the split)",
+  "test: 881 rows have first_submission_date outside their weekly file's date range (days outside: -1: 881)"
+ ],
+ "generated_at": "2026-11-19 05:58 UTC",
+ "nonconstant_features_in_sample": 1371,
+ "provenance": [
+  "measured in: local hardened Docker sandbox; repo commit `848a6284c76e39a3165829936bc140b04f0cd7cf`; feature sample 100 train rows/week",
+  "`Dot_Net_test.zip` sha256 `b74c4181dbd77565fce16ba47c8ab0f7c7044ae6d880d859ec2c27365dea6299`",
+  "`Dot_Net_train.zip` sha256 `b9f6e90ab75293a7ceb9339700586dd033a03d19766282755ee31dfa0836e625`"
+ ],
+ "sample_rows": 5200,
+ "schema_version": 1,
+ "splits": {
+  "test": {
+   "benign": 30000,
+   "dup_differ_only_ignored": 59173,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 59173,
+    "mbc": 40355,
+    "ttps": 38555
+   },
+   "dup_identical": 827,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 60000,
+   "file_type": "Dot_Net",
+   "first_week": "2024-09-22..2024-09-28",
+   "labels": {
+    "0": 30000,
+    "1": 30000
+   },
+   "last_week": "2024-12-08..2024-12-14",
+   "malicious": 30000,
+   "max_time": "2024-12-14T23:54:17+00:00",
+   "min_time": "2024-09-22T00:00:10+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 34814,
+    "family_confidence": 34814
+   },
+   "outside_week": 881,
+   "outside_week_days": {
+    "-1": 881
+   },
+   "raw_rows": 120000,
+   "rows": 60000,
+   "split": "test",
+   "time_types": {
+    "int": 60000
+   },
+   "unique_ids": 59953,
+   "unlabeled": 0,
+   "unparsable_time": 0,
+   "weeks": 12
+  },
+  "train": {
+   "benign": 130000,
+   "dup_differ_only_ignored": 256216,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 256216,
+    "mbc": 175941,
+    "ttps": 168174
+   },
+   "dup_identical": 3784,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 260000,
+   "file_type": "Dot_Net",
+   "first_week": "2023-09-24..2023-09-30",
+   "labels": {
+    "0": 130000,
+    "1": 130000
+   },
+   "last_week": "2024-09-15..2024-09-21",
+   "malicious": 130000,
+   "max_time": "2024-09-21T23:58:20+00:00",
+   "min_time": "2023-09-24T00:03:57+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 157963,
+    "family_confidence": 157963
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 520000,
+   "rows": 260000,
+   "split": "train",
+   "time_types": {
+    "int": 260000
+   },
+   "unique_ids": 260000,
+   "unlabeled": 0,
+   "unparsable_time": 0,
+   "weeks": 52
+  }
+ },
+ "train_test_overlap": 0,
+ "weekly": [
+  {
+   "dup_differ_only_ignored": 4882,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4882,
+    "mbc": 3087,
+    "ttps": 2929
+   },
+   "dup_identical": 118,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2023-09-30T23:58:48+00:00",
+   "min_time": "2023-09-24T00:03:57+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3136,
+    "family_confidence": 3136
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-09-30",
+    "file_type": "Dot_Net",
+    "name": "2023-09-24_2023-09-30_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2023-09-24"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4934,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4934,
+    "mbc": 3196,
+    "ttps": 3057
+   },
+   "dup_identical": 66,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2023-10-07T22:43:16+00:00",
+   "min_time": "2023-10-01T00:05:57+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 2882,
+    "family_confidence": 2882
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-10-07",
+    "file_type": "Dot_Net",
+    "name": "2023-10-01_2023-10-07_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2023-10-01"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4868,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4868,
+    "mbc": 3078,
+    "ttps": 2967
+   },
+   "dup_identical": 132,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2023-10-14T12:56:38+00:00",
+   "min_time": "2023-10-08T00:01:42+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3363,
+    "family_confidence": 3363
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-10-14",
+    "file_type": "Dot_Net",
+    "name": "2023-10-08_2023-10-14_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2023-10-08"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4924,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4924,
+    "mbc": 3208,
+    "ttps": 3121
+   },
+   "dup_identical": 76,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2023-10-21T23:59:16+00:00",
+   "min_time": "2023-10-15T00:00:35+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 2934,
+    "family_confidence": 2934
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-10-21",
+    "file_type": "Dot_Net",
+    "name": "2023-10-15_2023-10-21_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2023-10-15"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4884,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4884,
+    "mbc": 3176,
+    "ttps": 3048
+   },
+   "dup_identical": 116,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2023-10-28T23:57:17+00:00",
+   "min_time": "2023-10-22T00:00:45+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3111,
+    "family_confidence": 3111
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-10-28",
+    "file_type": "Dot_Net",
+    "name": "2023-10-22_2023-10-28_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2023-10-22"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4939,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4939,
+    "mbc": 3385,
+    "ttps": 3175
+   },
+   "dup_identical": 61,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2023-11-04T23:57:43+00:00",
+   "min_time": "2023-10-29T00:01:20+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 2941,
+    "family_confidence": 2941
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-11-04",
+    "file_type": "Dot_Net",
+    "name": "2023-10-29_2023-11-04_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2023-10-29"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4874,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4874,
+    "mbc": 3284,
+    "ttps": 3132
+   },
+   "dup_identical": 126,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2023-11-11T23:58:27+00:00",
+   "min_time": "2023-11-05T00:02:01+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 2992,
+    "family_confidence": 2992
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-11-11",
+    "file_type": "Dot_Net",
+    "name": "2023-11-05_2023-11-11_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2023-11-05"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4913,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4913,
+    "mbc": 3125,
+    "ttps": 2959
+   },
+   "dup_identical": 87,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2023-11-18T23:39:05+00:00",
+   "min_time": "2023-11-12T00:04:32+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3233,
+    "family_confidence": 3233
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-11-18",
+    "file_type": "Dot_Net",
+    "name": "2023-11-12_2023-11-18_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2023-11-12"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4906,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4906,
+    "mbc": 3246,
+    "ttps": 3093
+   },
+   "dup_identical": 94,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2023-11-25T23:56:40+00:00",
+   "min_time": "2023-11-19T00:00:08+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3172,
+    "family_confidence": 3172
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-11-25",
+    "file_type": "Dot_Net",
+    "name": "2023-11-19_2023-11-25_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2023-11-19"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4943,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4943,
+    "mbc": 3333,
+    "ttps": 3174
+   },
+   "dup_identical": 57,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2023-12-02T23:57:16+00:00",
+   "min_time": "2023-11-26T00:02:30+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 2962,
+    "family_confidence": 2962
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-12-02",
+    "file_type": "Dot_Net",
+    "name": "2023-11-26_2023-12-02_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2023-11-26"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4934,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4934,
+    "mbc": 3326,
+    "ttps": 3200
+   },
+   "dup_identical": 66,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2023-12-09T23:53:30+00:00",
+   "min_time": "2023-12-03T00:02:53+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 2938,
+    "family_confidence": 2938
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-12-09",
+    "file_type": "Dot_Net",
+    "name": "2023-12-03_2023-12-09_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2023-12-03"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4940,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4940,
+    "mbc": 3385,
+    "ttps": 3283
+   },
+   "dup_identical": 60,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2023-12-16T23:57:22+00:00",
+   "min_time": "2023-12-10T00:02:05+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3035,
+    "family_confidence": 3035
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-12-16",
+    "file_type": "Dot_Net",
+    "name": "2023-12-10_2023-12-16_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2023-12-10"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4939,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4939,
+    "mbc": 3291,
+    "ttps": 3125
+   },
+   "dup_identical": 61,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2023-12-23T23:58:29+00:00",
+   "min_time": "2023-12-17T00:12:23+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 2999,
+    "family_confidence": 2999
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-12-23",
+    "file_type": "Dot_Net",
+    "name": "2023-12-17_2023-12-23_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2023-12-17"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4946,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4946,
+    "mbc": 3384,
+    "ttps": 3182
+   },
+   "dup_identical": 54,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2023-12-30T23:57:46+00:00",
+   "min_time": "2023-12-24T00:00:46+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3135,
+    "family_confidence": 3135
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2023-12-30",
+    "file_type": "Dot_Net",
+    "name": "2023-12-24_2023-12-30_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2023-12-24"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4936,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4936,
+    "mbc": 3425,
+    "ttps": 3282
+   },
+   "dup_identical": 64,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-01-06T23:58:45+00:00",
+   "min_time": "2023-12-31T00:00:44+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3167,
+    "family_confidence": 3167
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-01-06",
+    "file_type": "Dot_Net",
+    "name": "2023-12-31_2024-01-06_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2023-12-31"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4947,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4947,
+    "mbc": 3277,
+    "ttps": 3155
+   },
+   "dup_identical": 53,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-01-13T11:07:43+00:00",
+   "min_time": "2024-01-07T00:00:42+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3052,
+    "family_confidence": 3052
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-01-13",
+    "file_type": "Dot_Net",
+    "name": "2024-01-07_2024-01-13_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-01-07"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4913,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4913,
+    "mbc": 3299,
+    "ttps": 3230
+   },
+   "dup_identical": 87,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-01-20T23:54:13+00:00",
+   "min_time": "2024-01-14T00:02:36+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 2978,
+    "family_confidence": 2978
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-01-20",
+    "file_type": "Dot_Net",
+    "name": "2024-01-14_2024-01-20_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-01-14"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4940,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4940,
+    "mbc": 3350,
+    "ttps": 3232
+   },
+   "dup_identical": 60,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-01-27T16:19:42+00:00",
+   "min_time": "2024-01-21T00:01:37+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 2665,
+    "family_confidence": 2665
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-01-27",
+    "file_type": "Dot_Net",
+    "name": "2024-01-21_2024-01-27_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-01-21"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4950,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4950,
+    "mbc": 3378,
+    "ttps": 3254
+   },
+   "dup_identical": 50,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-02-03T23:37:55+00:00",
+   "min_time": "2024-01-28T00:02:38+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 2621,
+    "family_confidence": 2621
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-02-03",
+    "file_type": "Dot_Net",
+    "name": "2024-01-28_2024-02-03_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-01-28"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4962,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4962,
+    "mbc": 3317,
+    "ttps": 3164
+   },
+   "dup_identical": 38,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-02-10T23:58:13+00:00",
+   "min_time": "2024-02-04T00:07:10+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 2643,
+    "family_confidence": 2643
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-02-10",
+    "file_type": "Dot_Net",
+    "name": "2024-02-04_2024-02-10_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-02-04"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4957,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4957,
+    "mbc": 3417,
+    "ttps": 3305
+   },
+   "dup_identical": 43,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-02-17T23:47:36+00:00",
+   "min_time": "2024-02-11T00:00:01+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 2656,
+    "family_confidence": 2656
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-02-17",
+    "file_type": "Dot_Net",
+    "name": "2024-02-11_2024-02-17_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-02-11"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4958,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4958,
+    "mbc": 3371,
+    "ttps": 3267
+   },
+   "dup_identical": 42,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-02-24T23:59:27+00:00",
+   "min_time": "2024-02-18T00:00:37+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 2670,
+    "family_confidence": 2670
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-02-24",
+    "file_type": "Dot_Net",
+    "name": "2024-02-18_2024-02-24_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-02-18"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4908,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4908,
+    "mbc": 3332,
+    "ttps": 3168
+   },
+   "dup_identical": 92,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-03-02T23:58:20+00:00",
+   "min_time": "2024-02-25T00:05:18+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3067,
+    "family_confidence": 3067
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-03-02",
+    "file_type": "Dot_Net",
+    "name": "2024-02-25_2024-03-02_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-02-25"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4888,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4888,
+    "mbc": 3280,
+    "ttps": 3105
+   },
+   "dup_identical": 112,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-03-09T23:59:38+00:00",
+   "min_time": "2024-03-03T00:02:02+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3136,
+    "family_confidence": 3136
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-03-09",
+    "file_type": "Dot_Net",
+    "name": "2024-03-03_2024-03-09_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-03-03"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4899,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4899,
+    "mbc": 3257,
+    "ttps": 3130
+   },
+   "dup_identical": 101,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-03-16T23:53:43+00:00",
+   "min_time": "2024-03-10T00:01:33+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3105,
+    "family_confidence": 3105
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-03-16",
+    "file_type": "Dot_Net",
+    "name": "2024-03-10_2024-03-16_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-03-10"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4931,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4931,
+    "mbc": 3361,
+    "ttps": 3137
+   },
+   "dup_identical": 69,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-03-23T23:59:50+00:00",
+   "min_time": "2024-03-17T00:00:00+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3032,
+    "family_confidence": 3032
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-03-23",
+    "file_type": "Dot_Net",
+    "name": "2024-03-17_2024-03-23_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-03-17"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4919,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4919,
+    "mbc": 3341,
+    "ttps": 3125
+   },
+   "dup_identical": 81,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-03-30T23:55:08+00:00",
+   "min_time": "2024-03-24T00:00:15+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3016,
+    "family_confidence": 3016
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-03-30",
+    "file_type": "Dot_Net",
+    "name": "2024-03-24_2024-03-30_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-03-24"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4941,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4941,
+    "mbc": 3428,
+    "ttps": 3178
+   },
+   "dup_identical": 59,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-04-06T23:53:43+00:00",
+   "min_time": "2024-03-31T00:02:43+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 2934,
+    "family_confidence": 2934
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-04-06",
+    "file_type": "Dot_Net",
+    "name": "2024-03-31_2024-04-06_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-03-31"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4937,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4937,
+    "mbc": 3361,
+    "ttps": 3045
+   },
+   "dup_identical": 63,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-04-13T23:59:58+00:00",
+   "min_time": "2024-04-07T00:01:47+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3017,
+    "family_confidence": 3017
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-04-13",
+    "file_type": "Dot_Net",
+    "name": "2024-04-07_2024-04-13_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-04-07"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4923,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4923,
+    "mbc": 3349,
+    "ttps": 3143
+   },
+   "dup_identical": 77,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-04-20T23:57:05+00:00",
+   "min_time": "2024-04-14T00:02:58+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3081,
+    "family_confidence": 3081
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-04-20",
+    "file_type": "Dot_Net",
+    "name": "2024-04-14_2024-04-20_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-04-14"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4900,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4900,
+    "mbc": 3350,
+    "ttps": 3316
+   },
+   "dup_identical": 100,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-04-27T23:53:22+00:00",
+   "min_time": "2024-04-21T00:00:52+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3373,
+    "family_confidence": 3373
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-04-27",
+    "file_type": "Dot_Net",
+    "name": "2024-04-21_2024-04-27_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-04-21"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4950,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4950,
+    "mbc": 3604,
+    "ttps": 3469
+   },
+   "dup_identical": 50,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-05-04T23:56:02+00:00",
+   "min_time": "2024-04-28T00:08:12+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3118,
+    "family_confidence": 3118
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-05-04",
+    "file_type": "Dot_Net",
+    "name": "2024-04-28_2024-05-04_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-04-28"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4922,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4922,
+    "mbc": 3495,
+    "ttps": 3224
+   },
+   "dup_identical": 78,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-05-11T23:53:22+00:00",
+   "min_time": "2024-05-05T00:09:41+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3348,
+    "family_confidence": 3348
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-05-11",
+    "file_type": "Dot_Net",
+    "name": "2024-05-05_2024-05-11_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-05-05"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4945,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4945,
+    "mbc": 3350,
+    "ttps": 3241
+   },
+   "dup_identical": 55,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-05-18T23:59:45+00:00",
+   "min_time": "2024-05-12T00:04:30+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3127,
+    "family_confidence": 3127
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-05-18",
+    "file_type": "Dot_Net",
+    "name": "2024-05-12_2024-05-18_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-05-12"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4916,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4916,
+    "mbc": 3647,
+    "ttps": 3405
+   },
+   "dup_identical": 84,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-05-25T23:54:35+00:00",
+   "min_time": "2024-05-19T00:37:58+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3161,
+    "family_confidence": 3161
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-05-25",
+    "file_type": "Dot_Net",
+    "name": "2024-05-19_2024-05-25_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-05-19"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4919,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4919,
+    "mbc": 3420,
+    "ttps": 3272
+   },
+   "dup_identical": 81,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-06-01T23:53:28+00:00",
+   "min_time": "2024-05-26T00:00:08+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3108,
+    "family_confidence": 3108
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-06-01",
+    "file_type": "Dot_Net",
+    "name": "2024-05-26_2024-06-01_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-05-26"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4939,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4939,
+    "mbc": 3307,
+    "ttps": 3231
+   },
+   "dup_identical": 61,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-06-08T22:59:37+00:00",
+   "min_time": "2024-06-02T00:01:41+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 2966,
+    "family_confidence": 2966
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-06-08",
+    "file_type": "Dot_Net",
+    "name": "2024-06-02_2024-06-08_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-06-02"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4937,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4937,
+    "mbc": 3421,
+    "ttps": 3308
+   },
+   "dup_identical": 63,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-06-15T23:54:23+00:00",
+   "min_time": "2024-06-09T00:28:30+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3178,
+    "family_confidence": 3178
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-06-15",
+    "file_type": "Dot_Net",
+    "name": "2024-06-09_2024-06-15_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-06-09"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4933,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4933,
+    "mbc": 3616,
+    "ttps": 3497
+   },
+   "dup_identical": 67,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-06-22T23:58:58+00:00",
+   "min_time": "2024-06-16T00:00:42+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3093,
+    "family_confidence": 3093
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-06-22",
+    "file_type": "Dot_Net",
+    "name": "2024-06-16_2024-06-22_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-06-16"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4935,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4935,
+    "mbc": 3432,
+    "ttps": 3356
+   },
+   "dup_identical": 65,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-06-29T23:53:08+00:00",
+   "min_time": "2024-06-23T00:00:58+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3345,
+    "family_confidence": 3345
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-06-29",
+    "file_type": "Dot_Net",
+    "name": "2024-06-23_2024-06-29_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-06-23"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4921,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4921,
+    "mbc": 3456,
+    "ttps": 3291
+   },
+   "dup_identical": 79,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-07-06T23:59:45+00:00",
+   "min_time": "2024-06-30T00:04:53+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3165,
+    "family_confidence": 3165
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-07-06",
+    "file_type": "Dot_Net",
+    "name": "2024-06-30_2024-07-06_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-06-30"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4939,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4939,
+    "mbc": 3497,
+    "ttps": 3358
+   },
+   "dup_identical": 61,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-07-13T23:59:26+00:00",
+   "min_time": "2024-07-07T00:06:36+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3082,
+    "family_confidence": 3082
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-07-13",
+    "file_type": "Dot_Net",
+    "name": "2024-07-07_2024-07-13_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-07-07"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4947,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4947,
+    "mbc": 3647,
+    "ttps": 3543
+   },
+   "dup_identical": 53,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-07-20T23:50:10+00:00",
+   "min_time": "2024-07-14T00:41:10+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3134,
+    "family_confidence": 3134
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-07-20",
+    "file_type": "Dot_Net",
+    "name": "2024-07-14_2024-07-20_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-07-14"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4941,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4941,
+    "mbc": 3648,
+    "ttps": 3552
+   },
+   "dup_identical": 59,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-07-27T23:58:11+00:00",
+   "min_time": "2024-07-21T00:01:21+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 2979,
+    "family_confidence": 2979
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-07-27",
+    "file_type": "Dot_Net",
+    "name": "2024-07-21_2024-07-27_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-07-21"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4946,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4946,
+    "mbc": 3464,
+    "ttps": 3351
+   },
+   "dup_identical": 54,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-08-03T22:30:53+00:00",
+   "min_time": "2024-07-28T00:01:28+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 2987,
+    "family_confidence": 2987
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-08-03",
+    "file_type": "Dot_Net",
+    "name": "2024-07-28_2024-08-03_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-07-28"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4923,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4923,
+    "mbc": 3558,
+    "ttps": 3433
+   },
+   "dup_identical": 77,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-08-10T23:39:55+00:00",
+   "min_time": "2024-08-04T00:00:25+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3012,
+    "family_confidence": 3012
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-08-10",
+    "file_type": "Dot_Net",
+    "name": "2024-08-04_2024-08-10_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-08-04"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4949,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4949,
+    "mbc": 3461,
+    "ttps": 3247
+   },
+   "dup_identical": 51,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-08-17T23:55:06+00:00",
+   "min_time": "2024-08-11T00:03:08+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3079,
+    "family_confidence": 3079
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-08-17",
+    "file_type": "Dot_Net",
+    "name": "2024-08-11_2024-08-17_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-08-11"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4929,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4929,
+    "mbc": 3585,
+    "ttps": 3402
+   },
+   "dup_identical": 71,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-08-24T23:58:00+00:00",
+   "min_time": "2024-08-18T00:00:55+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3051,
+    "family_confidence": 3051
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-08-24",
+    "file_type": "Dot_Net",
+    "name": "2024-08-18_2024-08-24_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-08-18"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4910,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4910,
+    "mbc": 3405,
+    "ttps": 3231
+   },
+   "dup_identical": 90,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-08-31T23:59:56+00:00",
+   "min_time": "2024-08-25T00:10:13+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3147,
+    "family_confidence": 3147
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-08-31",
+    "file_type": "Dot_Net",
+    "name": "2024-08-25_2024-08-31_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-08-25"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4924,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4924,
+    "mbc": 3638,
+    "ttps": 3483
+   },
+   "dup_identical": 76,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-09-07T23:59:36+00:00",
+   "min_time": "2024-09-01T00:00:50+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 3054,
+    "family_confidence": 3054
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-09-07",
+    "file_type": "Dot_Net",
+    "name": "2024-09-01_2024-09-07_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-09-01"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4925,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4925,
+    "mbc": 3396,
+    "ttps": 3262
+   },
+   "dup_identical": 75,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-09-14T23:58:25+00:00",
+   "min_time": "2024-09-08T00:05:33+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 2875,
+    "family_confidence": 2875
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-09-14",
+    "file_type": "Dot_Net",
+    "name": "2024-09-08_2024-09-14_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-09-08"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4931,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4931,
+    "mbc": 3497,
+    "ttps": 3337
+   },
+   "dup_identical": 69,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-09-21T23:58:20+00:00",
+   "min_time": "2024-09-15T00:01:35+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 2908,
+    "family_confidence": 2908
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-09-21",
+    "file_type": "Dot_Net",
+    "name": "2024-09-15_2024-09-21_Dot_Net_train.jsonl",
+    "split": "train",
+    "start": "2024-09-15"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4924,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4924,
+    "mbc": 3451,
+    "ttps": 3335
+   },
+   "dup_identical": 76,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-09-28T23:44:00+00:00",
+   "min_time": "2024-09-22T00:00:10+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 2912,
+    "family_confidence": 2912
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-09-28",
+    "file_type": "Dot_Net",
+    "name": "2024-09-22_2024-09-28_Dot_Net_test.jsonl",
+    "split": "test",
+    "start": "2024-09-22"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4940,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4940,
+    "mbc": 3318,
+    "ttps": 3130
+   },
+   "dup_identical": 60,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-10-05T23:58:30+00:00",
+   "min_time": "2024-09-29T00:01:55+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 2917,
+    "family_confidence": 2917
+   },
+   "outside_week": 0,
+   "outside_week_days": {},
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-10-05",
+    "file_type": "Dot_Net",
+    "name": "2024-09-29_2024-10-05_Dot_Net_test.jsonl",
+    "split": "test",
+    "start": "2024-09-29"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4923,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4923,
+    "mbc": 3328,
+    "ttps": 3237
+   },
+   "dup_identical": 77,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-10-12T23:57:22+00:00",
+   "min_time": "2024-10-05T00:34:25+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 2934,
+    "family_confidence": 2934
+   },
+   "outside_week": 45,
+   "outside_week_days": {
+    "-1": 45
+   },
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-10-12",
+    "file_type": "Dot_Net",
+    "name": "2024-10-06_2024-10-12_Dot_Net_test.jsonl",
+    "split": "test",
+    "start": "2024-10-06"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4943,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4943,
+    "mbc": 3506,
+    "ttps": 3389
+   },
+   "dup_identical": 57,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-10-19T23:59:12+00:00",
+   "min_time": "2024-10-12T00:00:01+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 2951,
+    "family_confidence": 2951
+   },
+   "outside_week": 135,
+   "outside_week_days": {
+    "-1": 135
+   },
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-10-19",
+    "file_type": "Dot_Net",
+    "name": "2024-10-13_2024-10-19_Dot_Net_test.jsonl",
+    "split": "test",
+    "start": "2024-10-13"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4927,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4927,
+    "mbc": 3493,
+    "ttps": 3332
+   },
+   "dup_identical": 73,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-10-26T23:54:17+00:00",
+   "min_time": "2024-10-19T00:01:26+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 2995,
+    "family_confidence": 2995
+   },
+   "outside_week": 96,
+   "outside_week_days": {
+    "-1": 96
+   },
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-10-26",
+    "file_type": "Dot_Net",
+    "name": "2024-10-20_2024-10-26_Dot_Net_test.jsonl",
+    "split": "test",
+    "start": "2024-10-20"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4935,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4935,
+    "mbc": 3409,
+    "ttps": 3320
+   },
+   "dup_identical": 65,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-11-02T23:59:36+00:00",
+   "min_time": "2024-10-26T00:13:17+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 2897,
+    "family_confidence": 2897
+   },
+   "outside_week": 90,
+   "outside_week_days": {
+    "-1": 90
+   },
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-11-02",
+    "file_type": "Dot_Net",
+    "name": "2024-10-27_2024-11-02_Dot_Net_test.jsonl",
+    "split": "test",
+    "start": "2024-10-27"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4864,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4864,
+    "mbc": 3446,
+    "ttps": 3290
+   },
+   "dup_identical": 136,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-11-09T23:59:05+00:00",
+   "min_time": "2024-11-02T00:00:52+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 2781,
+    "family_confidence": 2781
+   },
+   "outside_week": 121,
+   "outside_week_days": {
+    "-1": 121
+   },
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-11-09",
+    "file_type": "Dot_Net",
+    "name": "2024-11-03_2024-11-09_Dot_Net_test.jsonl",
+    "split": "test",
+    "start": "2024-11-03"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4944,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4944,
+    "mbc": 3362,
+    "ttps": 3176
+   },
+   "dup_identical": 56,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-11-16T23:58:26+00:00",
+   "min_time": "2024-11-09T00:04:05+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 2820,
+    "family_confidence": 2820
+   },
+   "outside_week": 43,
+   "outside_week_days": {
+    "-1": 43
+   },
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-11-16",
+    "file_type": "Dot_Net",
+    "name": "2024-11-10_2024-11-16_Dot_Net_test.jsonl",
+    "split": "test",
+    "start": "2024-11-10"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4934,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4934,
+    "mbc": 3368,
+    "ttps": 3121
+   },
+   "dup_identical": 66,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-11-23T23:51:31+00:00",
+   "min_time": "2024-11-16T00:00:01+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 2880,
+    "family_confidence": 2880
+   },
+   "outside_week": 111,
+   "outside_week_days": {
+    "-1": 111
+   },
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-11-23",
+    "file_type": "Dot_Net",
+    "name": "2024-11-17_2024-11-23_Dot_Net_test.jsonl",
+    "split": "test",
+    "start": "2024-11-17"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4950,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4950,
+    "mbc": 3297,
+    "ttps": 3127
+   },
+   "dup_identical": 50,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-11-30T23:41:45+00:00",
+   "min_time": "2024-11-23T00:16:40+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 2920,
+    "family_confidence": 2920
+   },
+   "outside_week": 90,
+   "outside_week_days": {
+    "-1": 90
+   },
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-11-30",
+    "file_type": "Dot_Net",
+    "name": "2024-11-24_2024-11-30_Dot_Net_test.jsonl",
+    "split": "test",
+    "start": "2024-11-24"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4951,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4951,
+    "mbc": 3231,
+    "ttps": 3099
+   },
+   "dup_identical": 49,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-12-07T23:54:57+00:00",
+   "min_time": "2024-11-30T00:31:04+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 2890,
+    "family_confidence": 2890
+   },
+   "outside_week": 106,
+   "outside_week_days": {
+    "-1": 106
+   },
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-12-07",
+    "file_type": "Dot_Net",
+    "name": "2024-12-01_2024-12-07_Dot_Net_test.jsonl",
+    "split": "test",
+    "start": "2024-12-01"
+   }
+  },
+  {
+   "dup_differ_only_ignored": 4938,
+   "dup_differ_other": 0,
+   "dup_differing_keys": {
+    "caps": 4938,
+    "mbc": 3146,
+    "ttps": 2999
+   },
+   "dup_identical": 62,
+   "dup_label_conflicts": 0,
+   "duplicate_rows": 5000,
+   "labels": {
+    "0": 2500,
+    "1": 2500
+   },
+   "max_time": "2024-12-14T23:54:17+00:00",
+   "min_time": "2024-12-07T01:27:27+00:00",
+   "missing_blocks": {},
+   "missing_id": 0,
+   "missing_metadata": {
+    "family": 2917,
+    "family_confidence": 2917
+   },
+   "outside_week": 44,
+   "outside_week_days": {
+    "-1": 44
+   },
+   "raw_rows": 10000,
+   "record_file_types": {
+    "Dot_Net": 5000
+   },
+   "rows": 5000,
+   "time_types": {
+    "int": 5000
+   },
+   "unparsable_time": 0,
+   "week": {
+    "end": "2024-12-14",
+    "file_type": "Dot_Net",
+    "name": "2024-12-08_2024-12-14_Dot_Net_test.jsonl",
+    "split": "test",
+    "start": "2024-12-08"
+   }
+  }
+ ]
+}
