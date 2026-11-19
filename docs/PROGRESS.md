@@ -1,15 +1,15 @@
 # Progress
 
 > **HANDOFF (2026-11-19)**
-> - **Done:** Stage 0 complete. All six file types measured (PDF/ELF/APK/Dot_Net locally in the sandbox; Win64/Win32 on Kaggle with the code bundle, commit `848a628`). `docs/DATASET_REPORT.md` covers all six, with a plan-assumption check and a recommendation. lint/mypy clean, 43 tests, 97% coverage.
-> - **STOPPED, waiting for the owner:** (1) which file type(s) to use (recommendation: Win64 or Win32; PDF has only 6,000 benign test files); (2) where Stage 1 runs (Win32 is likely too big for the local 6 GB sandbox; Win64 may fit).
-> - **Open issues for Stage 1:** raw records duplicated ×2 (dedupe by sha256; repeats differ only in caps/ttps/mbc, 0 label conflicts); files repeated across test weeks (Win32 6, Win64 7, Dot_Net 47, ELF 11); test rows dated 1 day before week start (Win32 23, Win64 13, Dot_Net 881, ELF 322).
-> - **Before uploading anything to Kaggle/Colab:** ask the owner (outward-facing).
+> - **Owner decisions:** Win64 + Win32 as separate datasets; all heavy runs on **Google Colab free** (~12.7 GB RAM, ephemeral disk); cleaned data is rebuilt each session (not stored).
+> - **Stage 1 code done + verified locally:** pipeline, schema, rules, tests (70 passed, 97%), real-data smoke run on PDF in the sandbox (64 weeks, 52,000/12,000 rows, 690 features, 500 never-break, 2m15s).
+> - **Next:** owner runs `notebooks/stage1_clean_win64_win32.ipynb` on Colab with a fresh `dist/sentinel_gate_code.zip` (`make bundle`). It returns `sentinel_stage1_results.zip`; copy `cleaning/Win64.json` + `cleaning/Win32.json` into `docs/cleaning/`, run `make cleaning-report`, update this file, then STOP.
+> - **Before uploading anything to Kaggle/Colab:** the owner does it (outward-facing).
 
 | Stage | Title | Status |
 |---|---|---|
-| 0 | Repo setup and dataset check [STOP] | DONE (awaiting owner choice) |
-| 1 | Data cleaning and data contracts | TODO |
+| 0 | Repo setup and dataset check [STOP] | DONE |
+| 1 | Data cleaning and data contracts | IN PROGRESS (waiting for Colab run) |
 | 2 | Baseline models and evaluation harness | TODO |
 | 3 | Serving service | TODO |
 | 4 | Replay stream and shadow scoring | TODO |
@@ -44,6 +44,27 @@ Owner rules: no git/GitHub commands by the assistant; wait for go-ahead after ev
 - Benign test files: Win32 180,000; Win64 60,000; Dot_Net 30,000; APK 24,000; PDF 6,000; ELF 3,000. Only Win32 and Win64 reach 50,000.
 - `make report`, `make lint` (ruff + mypy strict, 15 files) and `make test` (43 passed, 97%) green in the sandbox.
 
-### Issues found and fixed
+### Issues found and fixed (Stage 0)
 - `thrember` import chain broke in a clean environment: oscrypto 1.3.0 vs OpenSSL 3.0.22, signify 0.9 removed `SignedPEFile`, LightGBM needs libgomp1. All fixed (DECISIONS.md).
 - xet download error mid-file → retries + persistent chunk cache.
+
+---
+
+## Stage 1 — Data cleaning and data contracts
+
+### Plan
+- Config: `configs/clean.yaml` (seed, label values, non-finite fill, never-break size, late-label distribution, Parquet settings) → `CleanConfig` in `src/sentinel/config.py`.
+- Rules: `src/sentinel/data/clean.py` (pure functions). Contract: `src/sentinel/data/schema.py` (pandera). Streaming pipeline: `src/sentinel/data/pipeline.py`. Readers + late-label filter: `src/sentinel/data/splits.py`. Report: `src/sentinel/data/clean_report.py`.
+- Script `scripts/clean_data.py`; Make targets `data` (download + clean, `CLEAN_TYPES=Win64 Win32`), `clean-data`, `cleaning-report`.
+- Colab notebook `notebooks/stage1_clean_win64_win32.ipynb` (owner runs it).
+- Tests: `tests/unit/test_clean_rules.py` (one per rule, tiny inputs), `tests/unit/test_pipeline.py` (synthetic zips end to end: every rule counted, test-week row hashes never in train, re-run byte-identical with 1 vs 2 workers, schema accepts outputs and rejects bad rows, never-break benign/train-only, late-label filter).
+
+### Check results (local, 2026-11-19)
+- `make lint` — ruff + format clean; mypy strict: no issues in 20 source files.
+- `make test` — 70 passed; coverage 97% total; `src/sentinel/data/*` 95–100% (pipeline 96%, schema 95%, clean 100%).
+- Real-data smoke run (PDF, sandbox, 4 workers, 2m15s): 104,000→52,000 train and 24,000→12,000 test rows (raw repeats), 0 bad labels/timestamps/non-finite, 0 leakage, 0 duplicate vectors, 2,568→690 features, 500 never-break rows.
+- Profiling one Dot_Net (PE) week: ~1.8 ms/file pass 1, ~0.6 ms/file pass 2 → Colab estimate ~25 min Win64, ~60–80 min Win32 (2 CPUs) plus downloads.
+- Pending: Colab run for Win64 + Win32 (final counts, manifests, CLEANING_REPORT.md).
+
+### Issues found and fixed (Stage 1)
+- Determinism test was intermittently red: the synthetic test zips carried the wall-clock entry timestamp, so two runs built in different seconds had genuinely different raw bytes (different fingerprint). Fixed the test fixture with a fixed zip entry time; the pipeline itself was deterministic.

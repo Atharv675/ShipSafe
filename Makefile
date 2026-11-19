@@ -23,10 +23,10 @@ DATA_RW = "--mount=type=bind,source=$(DATA_DIR),target=/data"
 DOCS_RW = "--mount=type=bind,source=$(SRC)/docs,target=/work/docs"
 
 .PHONY: help lock sandbox setup hooks format lint test data download inspect report bundle \
-	train gate up down dashboard demo
+	clean-data cleaning-report train gate up down dashboard demo
 
 help:
-	@echo Targets: setup lint test data download inspect lock sandbox train gate up down dashboard demo
+	@echo Targets: setup lint test data download inspect report clean-data cleaning-report bundle lock sandbox train gate up down dashboard demo
 
 # Resolve dependencies into uv.lock (in a container; only uv.lock is written back).
 lock:
@@ -56,8 +56,20 @@ format:
 test:
 	$(SANDBOX) $(IMAGE) pytest --cov --cov-report=term-missing:skip-covered
 
-# Stage 0: download + inspect feature records. Stage 1 extends this with cleaning/splits.
-data: download inspect
+# Stage 1: download the chosen file types, then clean them into weekly splits + manifest.json.
+# Owner's choice: Win64 + Win32 (run on Colab; see notebooks/stage1_clean_win64_win32.ipynb).
+CLEAN_TYPES ?= Win64 Win32
+CLEAN_WORKERS ?= 4
+data:
+	$(MAKE) download FILE_TYPES="$(CLEAN_TYPES)"
+	$(MAKE) clean-data CLEAN_TYPES="$(CLEAN_TYPES)"
+
+# Writes only $(DATA_DIR)/{splits,clean} and docs/cleaning + docs/CLEANING_REPORT.md.
+clean-data:
+	$(SANDBOX) $(DATA_RW) $(DOCS_RW) $(IMAGE) python scripts/clean_data.py --file-types $(CLEAN_TYPES) --workers $(CLEAN_WORKERS)
+
+cleaning-report:
+	$(SANDBOX) $(DOCS_RW) $(IMAGE) python scripts/clean_data.py --report-only
 
 # Only step with network access; writes only into $(DATA_DIR).
 download:

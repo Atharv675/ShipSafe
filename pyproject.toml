@@ -8,6 +8,7 @@ dependencies = [
     "numpy>=1.26",
     "orjson>=3.10",
     "pandas>=2.2",
+    "pandera>=0.24",
     "pyarrow>=17",
     "pydantic>=2.8",
     "pydantic-settings>=2.4",
@@ -67,7 +68,7 @@ files = ["src"]
 mypy_path = "src"
 
 [[tool.mypy.overrides]]
-module = ["thrember.*", "huggingface_hub.*"]
+module = ["thrember.*", "huggingface_hub.*", "pyarrow.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

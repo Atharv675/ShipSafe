@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -86,6 +86,46 @@ class DataConfig(_Frozen):
     plan_assumption: PlanAssumption
 
 
+class NeverBreakConfig(_Frozen):
+    size: int = Field(gt=0)
+
+
+class LateLabelConfig(_Frozen):
+    distribution: Literal["uniform"]
+    min_days: float = Field(ge=0)
+    max_days: float = Field(ge=0)
+
+    @model_validator(mode="after")
+    def _ordered(self) -> LateLabelConfig:
+        if self.max_days < self.min_days:
+            raise ValueError("late_labels.max_days must be >= min_days")
+        return self
+
+
+class ParquetConfig(_Frozen):
+    compression: str
+    compression_level: int
+    row_group_size: int = Field(gt=0)
+
+
+class CleanConfig(_Frozen):
+    seed: int
+    file_types: list[str]
+    label_values: list[int]
+    benign_label: int
+    feature_prefix: str
+    feature_index_digits: int = Field(gt=0)
+    row_hash_digest_bytes: int = Field(ge=8, le=64)
+    non_finite_fill: float
+    never_break: NeverBreakConfig
+    late_labels: LateLabelConfig
+    parquet: ParquetConfig
+    keep_intermediate: bool
+
+    def feature_name(self, index: int) -> str:
+        return f"{self.feature_prefix}{index:0{self.feature_index_digits}d}"
+
+
 def load_yaml(path: Path) -> dict[str, Any]:
     with path.open(encoding="utf-8") as fh:
         loaded = yaml.safe_load(fh)
@@ -96,3 +136,7 @@ def load_yaml(path: Path) -> dict[str, Any]:
 
 def load_data_config(path: Path | None = None) -> DataConfig:
     return DataConfig.model_validate(load_yaml(path or CONFIG_DIR / "data.yaml"))
+
+
+def load_clean_config(path: Path | None = None) -> CleanConfig:
+    return CleanConfig.model_validate(load_yaml(path or CONFIG_DIR / "clean.yaml"))

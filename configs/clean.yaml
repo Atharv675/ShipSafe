@@ -1,0 +1,36 @@
+# Stage 1 cleaning configuration (rules explained in docs/DECISIONS.md, Stage 1).
+# Changing anything here changes feature_schema_version.
+seed: 20241122
+
+# Owner's choice (2026-11-19): Win64 and Win32, cleaned and modelled as separate datasets.
+file_types: [Win64, Win32]
+
+# Labels a row must carry to be kept (EMBER2024: 0 = benign, 1 = malicious).
+label_values: [0, 1]
+benign_label: 0
+
+# Feature columns are named f_NNNN after their index in the thrember v3 vector.
+feature_prefix: "f_"
+feature_index_digits: 4
+
+# Row identity for duplicate / leakage checks: blake2b digest of the float32 feature bytes.
+row_hash_digest_bytes: 16
+
+# NaN / +-inf in a feature vector are replaced with this value (and counted).
+non_finite_fill: 0.0
+
+never_break:
+  size: 500            # benign TRAIN-week files the model must never flag
+
+late_labels:
+  distribution: uniform
+  min_days: 7
+  max_days: 28
+
+parquet:
+  compression: zstd
+  compression_level: 3
+  row_group_size: 10000
+
+# Keep the full-width per-week vectors written by pass 1 (debugging only; doubles disk use).
+keep_intermediate: false
