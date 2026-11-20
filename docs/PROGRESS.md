@@ -1,18 +1,19 @@
 # Progress
 
-> **HANDOFF (2026-11-19)**
-> - **Owner decisions:** Win64 + Win32 as separate datasets. Heavy runs moved from Colab free (VM recycled after long runs, results lost) to **Kaggle CPU notebooks** (4 CPUs, ~34 GB RAM, background "Save & Run All"). Cleaned data is rebuilt each session (not stored); manifests prove it.
-> - **Stage 1 DONE (2026-11-19).** Win64 + Win32 cleaned on Kaggle (~50 min total); manifests in `docs/cleaning/`, report `docs/CLEANING_REPORT.md`.
-> - **Stage 2 DONE (2026-11-20):** v1 LightGBM trained on Kaggle for both datasets, registered as `sentinel-win64` / `sentinel-win32` (alias production) in `$SENTINEL_DATA_DIR/mlflow`; golden test covers both (95 passed). Next: Stage 3 after owner go-ahead. History: two Kaggle runs of `notebooks/stage2_train.ipynb` (FILE_TYPE=Win64, then Win32) with the new `dist/sentinel_gate_code.zip`. For each returned `sentinel_stage2_<type>.zip`: `make train BUNDLE=<path>` (registers v1/production, writes docs/models/<type>/ + docs/BASELINE.md), then write `tests/golden/v1_metrics.json` from the real metrics, run lint/test, STOP.
-> - **For Stage 2:** train with `sentinel.data.splits.labelled_as_of`; each Kaggle session first rebuilds splits with `scripts/clean_data.py` and checks per-week sha256 against `docs/cleaning/<type>.json`. Win32 train ≈ 1.56M × 2536 float32 ≈ 16 GB: fits in Kaggle's 34 GB, but load per week / LightGBM Dataset bins. Notebook platform check: detect Kaggle FIRST (Kaggle images contain `google.colab` and `/content`).
-> - **Before uploading anything to Kaggle/Colab:** the owner does it (outward-facing).
+> **HANDOFF (2026-11-20)**
+> - **Done:** Stages 0-3. Owner decisions: Win64 + Win32 as separate datasets; heavy data/training runs on **Kaggle CPU notebooks** (owner uploads/downloads; Claude never does). Cleaned data is rebuilt per Kaggle session; manifests in `docs/cleaning/` prove it.
+> - **Models:** `sentinel-win64` v1 and `sentinel-win32` v1, alias `production`, MLflow SQLite registry in `$SENTINEL_DATA_DIR/mlflow`; `docs/BASELINE.md`; golden test `tests/golden/v1_metrics.json`.
+> - **Stack:** `make up` (api on http://127.0.0.1:18080, mlflow :5000, jaeger :16686, postgres :5432; secrets in `.env`), `make sample-request`, `make test-integration`, `make down`.
+> - **Next:** Stage 4 (replay stream + shadow scoring) after the owner's go-ahead. Note for Stage 4: Win64/Win32 week files are not stored locally (only PDF/ELF/APK/Dot_Net raw zips are); replay needs the cleaned test weeks, so decide where they come from (rebuild locally from a download, or a Kaggle export) before building it.
+> - **Open issue:** the fixed threshold drifts above 0.1% FPR out of time (Win64 week 52, Win32 from ~week 56); candidate fix for a v2 challenger, for the gate to judge.
+> - **Rules:** no git/GitHub commands at all; stop after every stage; no real malware; everything runs in the hardened sandbox.
 
 | Stage | Title | Status |
 |---|---|---|
 | 0 | Repo setup and dataset check [STOP] | DONE |
-| 1 | Data cleaning and data contracts | DONE (awaiting owner go-ahead) |
-| 2 | Baseline models and evaluation harness | DONE (awaiting owner go-ahead) |
-| 3 | Serving service | TODO |
+| 1 | Data cleaning and data contracts | DONE |
+| 2 | Baseline models and evaluation harness | DONE |
+| 3 | Serving service | DONE (awaiting owner go-ahead) |
 | 4 | Replay stream and shadow scoring | TODO |
 | 5 | The release gate | TODO |
 | 6 | Ring rollout and automatic rollback [OPTIONAL] | TODO |
@@ -128,3 +129,35 @@ Owner rules: no git/GitHub commands by the assistant; wait for go-ahead after ev
 - LightGBM Dataset built with different params than training (min_data_in_leaf) → error; Dataset now gets the training params.
 - structlog crash "I/O operation on closed file" in tests → logger looks up sys.stderr per call.
 - Synthetic test weeks reused train seeds, so Stage 1's leakage rule (correctly) removed every test row; fixed the test data.
+
+## Stage 3 — Serving service
+
+### Plan
+- `configs/serving.yaml` → `ServingConfig` (file types, alias, poll 30 s, lineage batch/flush/queue, override refresh); `Settings.pg_dsn` from `.env` (never in git).
+- `src/sentinel/serving/models.py`: `LoadedModel` (booster + calibrator + meta, scores numpy directly), `MlflowModelSource` (alias → version, load by version), `ModelManager` (one slot per file type, keeps previous in memory, atomic swap of an immutable schema→model map, instant rollback, failed load keeps current). Requests are routed by `feature_schema_version` (Win64 and Win32 have different ones); unknown → 409.
+- `src/sentinel/serving/overrides.py`: per-tenant allow/block in Postgres `tenant_overrides`, cached snapshot refreshed every few seconds; `apply_override` (overrides win); log when an override changes a verdict. Not ready until the first snapshot loads.
+- `src/sentinel/serving/lineage.py`: `predictions` table, background batched inserts with a bounded queue; DB trouble never fails a request (drops counted).
+- `src/sentinel/serving/app.py`: `POST /v1/score`, `/healthz`, `/readyz`, `GET /v1/models`, `GET /v1/ops/stats`; `src/sentinel/monitoring/metrics.py` (requests, errors, latency by model_version); percentiles via `evaluate.latency_summary`.
+- Compose: postgres (pinned digest, init SQL + least-privilege API role), mlflow (our image, SQLite registry on `$SENTINEL_DATA_DIR/mlflow`), api, jaeger (pinned digest; tracing wired in Stage 8). Hardened: read-only, cap_drop ALL, no-new-privileges, ports on 127.0.0.1 only. `make up` / `make down`.
+- `scripts/make_sample_request.py`: a real request built from a local EMBER2024 feature record (Dot_Net test zip, same PE feature extractor) projected onto the model's columns, for curl.
+- Tests: unit (fake + real MLflow registry): hot reload under 200 concurrent requests → zero 5xx; schema mismatch → 409; allow-listed file never blocked; bad length / non-finite → 422; rollback; failed load keeps serving; lineage batching/drops; metrics. Integration (`make test-integration`, compose network): Postgres overrides + predictions round trip, curl-equivalent against the running api.
+
+### Check results (2026-11-20)
+- `make lint` — ruff + format clean; mypy strict: no issues in 31 source files.
+- `make test` (unit, sandbox, no network) — 124 passed, coverage 96% (serving/app 98%, models 97%; the PostgreSQL code paths are covered by the integration tests). Includes: hot reload under 200 concurrent requests with a real MLflow registry, alias v1→v2→v1→v2, 600/600 HTTP 200, zero 5xx; schema mismatch → 409; allow-listed file never blocked (50 random vectors on a model that flags everything); 422 on wrong length / NaN / float32 overflow; failed load, failed warm-up, schema clash and wrong file type all keep the current model; instant rollback; lineage batching, queue-full drops, retry-then-drop, flush on close; metrics percentiles = numpy.
+- `make up` — api, postgres, mlflow, jaeger all healthy; api ready ~7 s after start with the REAL models: `sentinel-win64/1` (2,538 features, schema `b9521b9b93166b91`) and `sentinel-win32/1` (2,536 features, schema `6bad8af2adf3d418`); api memory ~320 MiB.
+- curl `POST /v1/score` with real request bodies (`make sample-request`, Dot_Net test records projected onto Win64's columns): 3/3 benign → benign (scores 8.6e-5, 0.043, 7.8e-7); malicious → 2/3 flagged (0.99999985, 0.99999996), one at 0.99699 just under the strict threshold 0.99992 (out-of-distribution records; not an accuracy measure). Wrong schema → HTTP 409 with the served versions.
+- `make test-integration` (sandbox on the compose network) — 6 passed: both real models served by alias; lineage row matches the response field by field; 409; allow-list turns a real malicious verdict into benign (score unchanged) and is written to lineage; block-list wins; `sentinel_api` cannot UPDATE/DELETE predictions, write overrides or DROP tables.
+- Hardening verified with `docker inspect`: every service read-only, cap_drop ALL, no-new-privileges, ports bound to 127.0.0.1 only; api/mlflow uid 10001.
+- In-service latency (200 sequential curl requests, handler time only): p50 1.5 ms, p95 2.4 ms, p99 4.7 ms. End-to-end load test is Stage 8.
+
+### Issues found and fixed (Stage 3)
+- MLflow writes metadata next to artifacts when loading a `models:/` URI → failed on the read-only mount; the api now loads from a private temp copy (regression test). The failure itself showed the safety path working: api stayed up, not ready, retrying every 30 s.
+- Both compose services built the same image at once ("already exists") → `make up` builds it once.
+- Host ports 8000 (Splunk) and 8080 (Java) in use → api published on 18080 (`SENTINEL_API_PORT`).
+- `close()` of the lineage writer waited for the flush timer → it now notices shutdown within 50 ms.
+- Serving set MLflow's registry URI globally, which leaked into a Stage 2 test → removed (registry defaults to the tracking URI).
+- `make test-integration` echoed the database passwords in its command line → DSNs now passed via environment; both passwords rotated and the postgres volume recreated (it held only test rows).
+
+### Stage 3 DONE (2026-11-20)
+- Done-when met: `make up` works; curl to `/v1/score` works; tests pass (unit + integration); hot-reload design in DECISIONS.md.

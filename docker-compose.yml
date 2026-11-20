@@ -1,0 +1,96 @@
+# Sentinel Gate local stack (Stage 3): api, postgres, mlflow, jaeger.
+# No Prometheus / Grafana: metrics go to PostgreSQL (Stage 8), traces to Jaeger, dashboards
+# in Streamlit. Every port is published on 127.0.0.1 only. Secrets come from .env.
+#   make up      make down
+name: sentinel
+
+x-hardened: &hardened
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  restart: unless-stopped
+  pids_limit: 512
+
+x-app: &app
+  <<: *hardened
+  image: sentinel-app:dev   # built by `make up` (docker/sandbox.Dockerfile, target app)
+  user: "10001:10001"
+  tmpfs: ["/tmp:rw,nosuid,nodev,size=2g"]
+  environment: &app_env
+    SENTINEL_DATA_DIR: /data
+    SENTINEL_LOG_LEVEL: ${SENTINEL_LOG_LEVEL:-INFO}
+    HOME: /tmp
+
+services:
+  postgres:
+    <<: *hardened
+    image: postgres:17.6-alpine3.22@sha256:ef257d85f76e48da1c64832459b59fcaba1a4dac97bf5d7450c77753542eee94
+    # the entrypoint needs these to initialise the volume, then drops to the postgres user
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    tmpfs: ["/tmp", "/var/run/postgresql"]
+    environment:
+      POSTGRES_DB: sentinel
+      POSTGRES_USER: sentinel_admin
+      POSTGRES_PASSWORD: ${SENTINEL_PG_ADMIN_PASSWORD:?set SENTINEL_PG_ADMIN_PASSWORD in .env}
+      SENTINEL_API_DB_PASSWORD: ${SENTINEL_API_DB_PASSWORD:?set SENTINEL_API_DB_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    ports: ["127.0.0.1:5432:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sentinel_admin -d sentinel"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  mlflow:
+    <<: *app
+    # The Stage 2 registry: SQLite + file artifacts under $SENTINEL_DATA_DIR/mlflow.
+    command: >
+      mlflow server --backend-store-uri sqlite:////data/mlflow/mlflow.db
+      --default-artifact-root file:///data/mlflow/artifacts
+      --host 0.0.0.0 --port 5000 --workers 1
+      --allowed-hosts mlflow:5000,localhost:5000,127.0.0.1:5000
+    volumes:
+      - ${SENTINEL_DATA_DIR:?set SENTINEL_DATA_DIR in .env}/mlflow:/data/mlflow
+    ports: ["127.0.0.1:5000:5000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  api:
+    <<: *app
+    command: >
+      uvicorn --factory sentinel.serving.app:build_app
+      --host 0.0.0.0 --port 8000 --workers 1 --no-access-log
+    environment:
+      <<: *app_env
+      SENTINEL_MLFLOW_URI: http://mlflow:5000
+      MLFLOW_ENABLE_ARTIFACTS_PROGRESS_BAR: "false"
+      SENTINEL_PG_DSN: postgresql://sentinel_api:${SENTINEL_API_DB_PASSWORD}@postgres:5432/sentinel
+    volumes:
+      # artifacts are read straight from the registry's file store (read-only)
+      - ${SENTINEL_DATA_DIR}/mlflow:/data/mlflow:ro
+    ports: ["127.0.0.1:${SENTINEL_API_PORT:-18080}:8000"]   # host 8000/8080 are often taken (Splunk, Java servers)
+    mem_limit: 6g
+    depends_on:
+      postgres: {condition: service_healthy}
+      mlflow: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  jaeger:
+    <<: *hardened
+    # Traces (wired into the api in Stage 8). UI: http://127.0.0.1:16686
+    image: jaegertracing/jaeger:2.11.0@sha256:b585df1b6299bbbd16bf7c679da30389349736e4b6bc8f4f500142a75bf26ca8
+    tmpfs: ["/tmp"]
+    ports: ["127.0.0.1:16686:16686"]
+    expose: ["4317", "4318"]
+
+volumes:
+  pgdata:

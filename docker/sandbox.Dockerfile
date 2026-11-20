@@ -43,3 +43,11 @@ ENV PATH=/opt/venv/bin:/usr/local/bin:/usr/bin:/bin \
     SENTINEL_DATA_DIR=/data
 USER 10001:10001
 WORKDIR /work
+
+# ---- app: the same locked runtime with the code baked in (api + mlflow server in compose)
+FROM runtime AS app
+COPY src /app/src
+COPY configs /app/configs
+ENV PYTHONPATH=/app/src \
+    GIT_PYTHON_REFRESH=quiet
+WORKDIR /app

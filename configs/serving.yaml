@@ -1,0 +1,17 @@
+# Stage 3: scoring service. Model names come from configs/train.yaml (mlflow.model_name_template).
+service_name: api
+file_types: [Win64, Win32]     # one registered model per type; requests routed by feature_schema_version
+model_alias: production        # the ONLY thing serving trusts: whatever this alias points to
+poll_seconds: 30               # registry poll interval for hot reload
+predict_threads: 1             # LightGBM threads per request (one row: more threads only add overhead)
+max_id_length: 256             # file_id / tenant_id length limit
+latency_samples: 10000         # per-series latency reservoir in the in-process metrics recorder
+
+lineage:                       # predictions table, written in the background
+  batch_size: 500              # insert when this many rows are waiting...
+  flush_seconds: 1.0           # ...or after this long, whichever comes first
+  queue_max: 100000            # bounded buffer; if full, rows are dropped and counted (never block a request)
+  max_retries: 3               # a failed batch is retried this many times, then dropped and counted
+
+overrides:
+  refresh_seconds: 5           # tenant allow/block snapshot reload interval

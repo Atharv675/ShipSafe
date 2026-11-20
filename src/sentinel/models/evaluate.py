@@ -221,3 +221,35 @@ def per_week_metrics(
             {"week": int(w), **rates_at_threshold(yy[m], ss[m], threshold, confidence).as_dict()}
         )
     return out
+
+
+# ---------------------------------------------------------------------------- operations
+
+
+@dataclass(frozen=True)
+class LatencySummary:
+    count: int
+    sum: float
+    p50: float
+    p95: float
+    p99: float
+
+    def as_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+def latency_summary(values: ArrayLike) -> LatencySummary:
+    """Count, sum and p50/p95/p99 (linear interpolation, numpy's default) of samples.
+
+    Empty input gives count 0 and NaN percentiles (no samples is not "zero latency").
+    """
+    v = np.asarray(values, dtype=np.float64)
+    if v.ndim != 1:
+        raise ValueError("values must be 1-D")
+    if v.size == 0:
+        nan = float("nan")
+        return LatencySummary(0, 0.0, nan, nan, nan)
+    if not np.isfinite(v).all():
+        raise ValueError("values must be finite")
+    p50, p95, p99 = np.percentile(v, [50, 95, 99])
+    return LatencySummary(int(v.size), float(v.sum()), float(p50), float(p95), float(p99))

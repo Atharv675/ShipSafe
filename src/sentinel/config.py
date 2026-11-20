@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     data_dir: Path = Field(default=REPO_ROOT / "data")
     log_level: str = "INFO"
     mlflow_uri: str | None = None  # default: SQLite registry under data_dir/mlflow
+    pg_dsn: str | None = None  # PostgreSQL DSN for serving (secret: .env / compose only)
 
     @property
     def mlflow_dir(self) -> Path:
@@ -197,6 +198,29 @@ class TrainConfig(_Frozen):
     mlflow: MlflowConfig
 
 
+class LineageConfig(_Frozen):
+    batch_size: int = Field(gt=0)
+    flush_seconds: float = Field(gt=0)
+    queue_max: int = Field(gt=0)
+    max_retries: int = Field(ge=0)
+
+
+class OverridesConfig(_Frozen):
+    refresh_seconds: float = Field(gt=0)
+
+
+class ServingConfig(_Frozen):
+    service_name: str
+    file_types: list[str] = Field(min_length=1)
+    model_alias: str
+    poll_seconds: float = Field(gt=0)
+    predict_threads: int = Field(ge=1)
+    max_id_length: int = Field(gt=0)
+    latency_samples: int = Field(gt=0)
+    lineage: LineageConfig
+    overrides: OverridesConfig
+
+
 def load_yaml(path: Path) -> dict[str, Any]:
     with path.open(encoding="utf-8") as fh:
         loaded = yaml.safe_load(fh)
@@ -215,3 +239,7 @@ def load_clean_config(path: Path | None = None) -> CleanConfig:
 
 def load_train_config(path: Path | None = None) -> TrainConfig:
     return TrainConfig.model_validate(load_yaml(path or CONFIG_DIR / "train.yaml"))
+
+
+def load_serving_config(path: Path | None = None) -> ServingConfig:
+    return ServingConfig.model_validate(load_yaml(path or CONFIG_DIR / "serving.yaml"))

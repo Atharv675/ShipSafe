@@ -83,3 +83,30 @@ Registry
 - **Training on Kaggle produces a run bundle; registration happens locally in the sandbox** (`make train BUNDLE=...`) into an MLflow SQLite registry in `$SENTINEL_DATA_DIR/mlflow` — MLflow stores absolute artifact paths, so a registry built on Kaggle would not move; the registry belongs next to the serving stack (Stage 3) — *MLflow on Kaggle*. Params, metrics, feature_schema_version, data fingerprint and git commit are logged from the bundle; LightGBM is registered as `sentinel-<type>` and aliased `production`; LR is logged as a comparison run.
 - **One registered model per dataset** (`sentinel-win64`, `sentinel-win32`) — matches "train separately"; each has its own production alias.
 - **`structlog` writes to the current `sys.stderr` on every call** — the stock PrintLogger kept a stream that test runners/notebooks later close (caused a crash in tests).
+
+## Stage 3
+
+Hot reload (design)
+- **Serving trusts only the registry alias** (`production`, `configs/serving.yaml`): a poller thread asks MLflow every 30 s which version the alias points to — *loading by version number or file path*.
+- **Load first, then swap; never swap a half-loaded model.** A new version is copied to private temp space, loaded, and must pass a warm-up (score one all-zero row, finite result, right file type, no schema clash) before it takes traffic. If any step fails, the current model keeps serving and the error shows in `/v1/models` — *swap then verify*.
+- **Atomic swap = rebind one immutable dict.** Requests read `{feature_schema_version: model}` once and keep that model for the whole request; a reload builds a new dict and rebinds the attribute. Readers never lock, so a reload cannot fail or stall requests. Measured: 3 alias moves under 200 concurrent requests each, 600/600 HTTP 200 (unit test with a real MLflow registry) — *a lock around every request* (slower, and a slow load would block scoring).
+- **The previous model stays in memory.** If the alias moves back to it, or `rollback()` is called (admin endpoint in Stage 6), the swap is instant with no load. Slow loads do not hold the swap lock, so a rollback never waits behind a load — *reload from the registry on rollback* (seconds, during an incident).
+- **Load from a copy, not in place.** MLflow writes metadata next to artifacts when loading a `models:/` URI; the api mounts the registry's file store read-only, so it downloads to its tmpfs first (found when the first `make up` refused to load; regression test added).
+- **Readiness**: `/readyz` is 503 until every configured model AND the override snapshot have loaded; `/healthz` is liveness only.
+
+Request contract
+- **Requests are routed by `feature_schema_version`**, which differs for Win64 (`b9521b9b…`) and Win32 (`6bad8af2…`): clients send the version their features were built with, and the server never guesses the file type — *a separate `file_type` field* (two fields that could disagree). Unknown version → **409** with the versions being served; wrong feature count or non-finite values → **422**. Nothing is ever scored silently.
+- **`score` is the model's raw score and the verdict is `score > threshold`** (the fixed-FPR threshold from Stage 2, returned with every response) — *calibrated probability* (the threshold is defined on raw scores; mixing them invites mistakes).
+
+Overrides and lineage
+- **Overrides live outside the model and always win** (`tenant_overrides`, per tenant + file, allow or block, reason required). The api keeps an in-memory snapshot refreshed every 5 s, so scoring never waits on the database; it is not ready until the first snapshot loads (otherwise an allow-listed file could be blocked at start-up); during a database outage it keeps the last snapshot. A change takes up to 5 s to apply — *a database read per request* (adds latency and makes scoring depend on DB uptime). Every override that changes a verdict is logged (`override_changed_verdict`) and counted.
+- **Lineage rows are written in the background in batches** (500 rows or 1 s), from a bounded queue; a database problem never fails or slows a request. Rows that cannot be written (queue full, or a batch failing 3 retries) are dropped and counted (`lineage_dropped`) — *synchronous insert per request*. `request_id` is the primary key and inserts are idempotent.
+- **Least privilege in PostgreSQL**: the api logs in as `sentinel_api` with only INSERT/SELECT on `predictions` and SELECT on `tenant_overrides` (no UPDATE/DELETE: lineage is append-only for the service; an integration test checks this). Passwords are only in `.env`.
+
+Stack
+- **Compose: api, postgres, mlflow, jaeger only** (no Prometheus/Grafana, per the plan). The api and mlflow server use our locked image (target `app` of `docker/sandbox.Dockerfile`), so the server version matches the registry that Stage 2 wrote. Postgres 17.6 and Jaeger 2.11.0 are pinned by digest.
+- **Hardened like the sandbox**: read-only root filesystems, `cap_drop: ALL`, `no-new-privileges`, non-root users, tmpfs for scratch; postgres gets back only the 5 capabilities its entrypoint needs. All ports are published on 127.0.0.1 only.
+- **API host port 18080 (configurable `SENTINEL_API_PORT`)**: 8000 (Splunk) and 8080 (a Java server) were already in use on this machine — the container still listens on 8000.
+- **Tracing**: the Jaeger container is in the stack now; the api is instrumented in Stage 8 (one trace per event), as the plan orders.
+- **Metrics (simple version)**: in-process counters and latency samples by `model_version` (`/v1/ops/stats`); percentiles come from `evaluate.latency_summary`. Stage 8 adds the writer to `ops_metrics`.
+- **Sample requests for curl come from real EMBER2024 feature records** (`make sample-request`): Win64/Win32 records are not kept locally, so it vectorizes Dot_Net test records (same PE extractor) onto the Win64 model's columns with the Stage 1 cleaning. They are out-of-distribution, so they exercise the API but say nothing about accuracy.

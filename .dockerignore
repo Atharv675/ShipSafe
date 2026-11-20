@@ -1,3 +1,7 @@
 *
 !pyproject.toml
 !uv.lock
+!src
+!configs
+**/__pycache__
+**/*.pyc
