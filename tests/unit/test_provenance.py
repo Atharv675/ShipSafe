@@ -40,3 +40,14 @@ def test_bundle_info_fallback(tmp_path: Path) -> None:
 
 def test_detached_head(tmp_path: Path) -> None:
     assert git_commit(_git(tmp_path, SHA + "\n")) == SHA
+
+
+def test_bundle_info_pins_the_shipped_files(tmp_path: Path) -> None:
+    files = {"src/a.py": "11", "configs/b.yaml": "22"}
+    (tmp_path / "BUNDLE_INFO.json").write_text(json.dumps({"git_commit": SHA, "files": files}))
+    first = git_commit(tmp_path)
+    assert first.startswith(f"{SHA} (code bundle, files sha256 ")
+    (tmp_path / "BUNDLE_INFO.json").write_text(
+        json.dumps({"git_commit": SHA, "files": {**files, "src/a.py": "33"}})
+    )
+    assert git_commit(tmp_path) != first  # same commit, different code -> different lineage

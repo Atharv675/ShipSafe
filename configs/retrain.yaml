@@ -1,0 +1,15 @@
+# Stage 4: retrain a CANDIDATE at simulated time T (end of week `as_of_week`).
+# Owner decision (2026-11-20): a candidate at T may learn from ANY week whose labels are known
+# by T, test weeks included; its threshold/calibration use only weeks <= T; it is only ever
+# judged on weeks AFTER T. LightGBM params, seed and target FPR come from configs/train.yaml.
+as_of_week: 52                 # T for the Stage 4 candidate (last train week)
+calibration_weeks: 4           # newest weeks <= T: isotonic calibration + fixed-FPR threshold
+min_fit_rows: 1000             # refuse to train on less (e.g. a too-small window)
+policy: last_n_weeks           # which policy builds the Stage 4 candidate
+policies:
+  all_history: {}              # every week before the calibration window
+  last_n_weeks:
+    n_weeks: 26                # only the newest N weeks before the calibration window
+  recency_weighted:
+    half_life_weeks: 8         # all history, sample weight halves every 8 weeks of age (vs T)
+mlflow_alias: candidate        # registered as a new version of sentinel-<type> with this alias

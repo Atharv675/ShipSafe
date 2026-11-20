@@ -24,7 +24,8 @@ DOCS_RW = "--mount=type=bind,source=$(SRC)/docs,target=/work/docs"
 
 .PHONY: help lock sandbox setup hooks format lint test data download inspect report bundle \
 	clean-data cleaning-report train baseline-report train-smoke gate up down sample-request \
-	test-integration dashboard demo
+	test-integration migrate import-replay register-candidate replay replay-counts replay-check \
+	dashboard demo
 
 help:
 	@echo Targets: setup lint test test-integration data download inspect report clean-data cleaning-report bundle lock sandbox train gate up down sample-request dashboard demo
@@ -141,3 +142,40 @@ dashboard:
 
 demo:
 	@echo "demo: implemented in Stage 10" && exit 1
+
+# ---------------------------------------------------------------- Stage 4: replay + shadow
+# Apply the idempotent Stage 4 schema + shadow role to an existing database.
+migrate:
+	$(COMPOSE) exec -T postgres psql -v ON_ERROR_STOP=1 -U sentinel_admin -d sentinel \
+		-f /docker-entrypoint-initdb.d/003_stage4.sql
+	$(COMPOSE) exec -T postgres sh /docker-entrypoint-initdb.d/004_shadow_role.sh
+
+# Verify + install a Kaggle replay export (test weeks + never-break set).
+ZIP ?=
+import-replay:
+	@test -n "$(ZIP)" || (echo "usage: make import-replay ZIP=<path to sentinel_stage4_replay_<type>.zip>" && exit 1)
+	$(SANDBOX) $(DATA_RW) "--mount=type=bind,source=$(ZIP),target=/in/replay.zip,readonly" \
+		$(IMAGE) python scripts/import_replay.py --zip /in/replay.zip
+
+# Register a Kaggle candidate bundle under the `candidate` alias (production untouched).
+register-candidate:
+	@test -n "$(BUNDLE)" || (echo "usage: make register-candidate BUNDLE=<path to sentinel_stage4_candidate_<type>.zip>" && exit 1)
+	$(SANDBOX) $(DATA_RW) "--mount=type=bind,source=$(BUNDLE),target=/in/candidate.zip,readonly" \
+		-e GIT_PYTHON_REFRESH=quiet $(IMAGE) python scripts/register_candidate.py --bundle /in/candidate.zip
+
+# Publish weeks to file-events (e.g. make replay WEEKS="53 54"); optional EPS=events/second.
+WEEKS ?= 53 54
+EPS ?=
+replay:
+	$(COMPOSE) --profile tools run --rm producer --weeks $(WEEKS) $(if $(EPS),--events-per-second $(EPS))
+
+# Counts for replayed weeks (sandbox on the compose network), e.g. ARGS="snapshot --weeks 53".
+ARGS ?= snapshot --weeks 53 54
+replay-counts: export SENTINEL_IT_ADMIN_DSN = postgresql://sentinel_admin:$(SENTINEL_PG_ADMIN_PASSWORD)@postgres:5432/sentinel
+replay-counts:
+	@$(SANDBOX_NET) --network=sentinel_default -e SENTINEL_IT_ADMIN_DSN $(DATA_RO) $(IMAGE) \
+		python scripts/replay_counts.py $(ARGS)
+
+# The three Stage 4 checks end to end (2-week replay, kill shadow mid-run, replay twice).
+replay-check:
+	bash scripts/replay_check.sh

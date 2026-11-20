@@ -12,7 +12,8 @@ Follow docs/BUILD_PLAN.md (Execution Protocol in Part A). Progress lives in docs
 - Fixed seeds. Every result file records seed, data fingerprint and git commit.
 - structlog JSON logging, no print in src/.
 ## Data rules
-- Never use test weeks for training, tuning, thresholds or calibration.
+- Never use test weeks for training, tuning, thresholds or calibration of v1 or of any reported baseline.
+- Exception (owner decision 2026-11-20, Stages 4+): a CANDIDATE retrained at simulated time T may learn from any week whose labels are known by T (earlier test weeks included); its threshold/calibration use only weeks <= T, and it is judged only on weeks after T.
 - Time order is sacred: no future information anywhere.
 - Every cleaning step logs row counts before and after.
 - Dataset lives in $SENTINEL_DATA_DIR (outside OneDrive; see .env.example), never in git.

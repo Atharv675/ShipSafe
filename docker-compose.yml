@@ -1,4 +1,5 @@
-# Sentinel Gate local stack (Stage 3): api, postgres, mlflow, jaeger.
+# Sentinel Gate local stack: api, postgres, mlflow, jaeger (Stage 3); redpanda + live and
+# shadow consumers (Stage 4); the replay producer runs on demand (`make replay WEEKS=...`).
 # No Prometheus / Grafana: metrics go to PostgreSQL (Stage 8), traces to Jaeger, dashboards
 # in Streamlit. Every port is published on 127.0.0.1 only. Secrets come from .env.
 #   make up      make down
@@ -33,6 +34,7 @@ services:
       POSTGRES_USER: sentinel_admin
       POSTGRES_PASSWORD: ${SENTINEL_PG_ADMIN_PASSWORD:?set SENTINEL_PG_ADMIN_PASSWORD in .env}
       SENTINEL_API_DB_PASSWORD: ${SENTINEL_API_DB_PASSWORD:?set SENTINEL_API_DB_PASSWORD in .env}
+      SENTINEL_SHADOW_DB_PASSWORD: ${SENTINEL_SHADOW_DB_PASSWORD:?set SENTINEL_SHADOW_DB_PASSWORD in .env}
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -74,7 +76,7 @@ services:
       # artifacts are read straight from the registry's file store (read-only)
       - ${SENTINEL_DATA_DIR}/mlflow:/data/mlflow:ro
     ports: ["127.0.0.1:${SENTINEL_API_PORT:-18080}:8000"]   # host 8000/8080 are often taken (Splunk, Java servers)
-    mem_limit: 6g
+    mem_limit: 3g
     depends_on:
       postgres: {condition: service_healthy}
       mlflow: {condition: service_healthy}
@@ -92,5 +94,63 @@ services:
     ports: ["127.0.0.1:16686:16686"]
     expose: ["4317", "4318"]
 
+  redpanda:
+    <<: *hardened
+    # Kafka-compatible broker, single node. Topic `file-events` is created by the producer.
+    image: redpandadata/redpanda:v25.2.9@sha256:bd6c35647153a4dbc19507c8037dcca0802484c23e6e5fbb97591a62539e313a
+    command: >
+      redpanda start --mode dev-container --smp 1 --memory 1G --overprovisioned
+      --kafka-addr internal://0.0.0.0:9092
+      --advertise-kafka-addr internal://redpanda:9092
+      --rpc-addr 0.0.0.0:33145 --advertise-rpc-addr redpanda:33145
+    tmpfs: ["/tmp:uid=101,gid=101", "/etc/redpanda:uid=101,gid=101,mode=0755"]   # image runs as uid 101
+    volumes:
+      - redpanda:/var/lib/redpanda/data
+    mem_limit: 1536m
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health --exit-when-healthy"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+
+  live-consumer:
+    <<: *app
+    # Consumer A: every event -> POST /v1/score on the api (verdicts that count).
+    command: python -m sentinel.replay.live_consumer
+    mem_limit: 1g
+    depends_on:
+      redpanda: {condition: service_healthy}
+      api: {condition: service_healthy}
+
+  shadow-consumer:
+    <<: *app
+    # Consumer B: separate process + own DB login; scores with the `candidate` alias only.
+    command: python -m sentinel.replay.shadow_consumer
+    environment:
+      <<: *app_env
+      SENTINEL_MLFLOW_URI: http://mlflow:5000
+      MLFLOW_ENABLE_ARTIFACTS_PROGRESS_BAR: "false"
+      SENTINEL_SHADOW_DSN: postgresql://sentinel_shadow:${SENTINEL_SHADOW_DB_PASSWORD}@postgres:5432/sentinel
+    volumes:
+      - ${SENTINEL_DATA_DIR}/mlflow:/data/mlflow:ro
+    mem_limit: 2g
+    depends_on:
+      redpanda: {condition: service_healthy}
+      postgres: {condition: service_healthy}
+      mlflow: {condition: service_healthy}
+
+  producer:
+    <<: *app
+    # One-shot: `make replay WEEKS="53 54"` (not started by `make up`).
+    profiles: ["tools"]
+    restart: "no"
+    entrypoint: ["python", "-m", "sentinel.replay.producer"]
+    volumes:
+      - ${SENTINEL_DATA_DIR}/splits:/data/splits:ro
+    mem_limit: 3g
+    depends_on:
+      redpanda: {condition: service_healthy}
+
 volumes:
   pgdata:
+  redpanda:

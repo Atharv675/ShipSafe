@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -20,7 +21,13 @@ def git_commit(repo_root: Path) -> str:
         info = repo_root / BUNDLE_INFO
         if info.is_file():
             data = json.loads(info.read_text(encoding="utf-8"))
-            return f"{data.get('git_commit', 'uncommitted')} (code bundle)"
+            commit = data.get("git_commit", "uncommitted")
+            files = data.get("files")
+            if not files:
+                return f"{commit} (code bundle)"
+            # the commit can lag behind uncommitted code: also pin the exact files shipped
+            code = hashlib.sha256(json.dumps(files, sort_keys=True).encode()).hexdigest()
+            return f"{commit} (code bundle, files sha256 {code[:16]})"
         return "uncommitted"
     head = head_file.read_text(encoding="utf-8").strip()
     if not head.startswith("ref: "):

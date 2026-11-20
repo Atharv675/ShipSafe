@@ -110,3 +110,20 @@ Stack
 - **Tracing**: the Jaeger container is in the stack now; the api is instrumented in Stage 8 (one trace per event), as the plan orders.
 - **Metrics (simple version)**: in-process counters and latency samples by `model_version` (`/v1/ops/stats`); percentiles come from `evaluate.latency_summary`. Stage 8 adds the writer to `ops_metrics`.
 - **Sample requests for curl come from real EMBER2024 feature records** (`make sample-request`): Win64/Win32 records are not kept locally, so it vectorizes Dot_Net test records (same PE extractor) onto the Win64 model's columns with the Stage 1 cleaning. They are out-of-distribution, so they exercise the API but say nothing about accuracy.
+
+## Stage 4
+
+### Data and candidate
+- **A candidate retrained at T may learn from test weeks whose labels are known by T; threshold/calibration only from weeks <= T; judged only on weeks after T** (owner, 2026-11-20). v1 and reported baselines never see test weeks — *forbid test weeks entirely* (a model retrained in week 60 could never learn from weeks 53-59, which is unrealistic).
+- **First candidate: policy `last_n_weeks` (26), T = end of week 52, 4 calibration weeks (49-52)** (`configs/retrain.yaml`) — tests "does recent data alone beat a full-year model?", and T = 52 lets it be judged on all twelve test weeks. `all_history` and `recency_weighted` are implemented and tested, not yet trained.
+- **Test weeks come from a Kaggle export, not a local rebuild**: the Kaggle run rebuilds the splits, checks them by content against `docs/cleaning/Win64.json`, and zips weeks 53-64 + the never-break set with a sha256 per file. `make import-replay` accepts only allow-listed names, re-hashes every file, checks each week's hash against the shipped manifest and the manifest content against `docs/cleaning/`, and installs nothing until every check passes — *trusting the zip* (it is downloaded data).
+- **`make register-candidate` refuses bundles that are not `kind: candidate`, have no `identical content` rebuild check, or target the `production` alias** — a candidate can never be promoted by registration; promotion is the gate's job (Stage 5).
+
+### Stream
+- **Redpanda v25.2.9 pinned by digest; topic `file-events`, 6 partitions, key = file_id** (plan: partitioned by file_id). Hardened like the rest; its data dir is a tmpfs owned by uid 101 (the replay is reproducible from the week files, so the log does not need to survive restarts).
+- **Event format v1**: `event_id = "<file_type>:<sha256>"` (deterministic, so a replay re-sends the same ids), tenant = blake2b(file_id) mod 200, ring from a stable hash of the tenant (ring0 5%, ring1 25%, ring2 rest), features as base64 float32 little-endian. **Events carry no label** — consumers cannot see ground truth; evaluation joins labels later from the week files.
+- **Producer order = (first_seen, file_id)**, optional pacing (`events_per_second`, 0 = as fast as possible); broker idempotence on; it fails loudly if any delivery fails (a replay with holes would make every comparison meaningless).
+- **At-least-once + idempotent writes**: consumers commit offsets only after rows are stored; duplicates from re-delivery or re-replay hit unique `(event_id, model_version)` and `ON CONFLICT DO NOTHING` — *exactly-once transactions* (more moving parts for the same result).
+- **Live consumer calls the serving API** (as the plan says), passing `event_id` (new optional request field written to lineage). 5xx/timeouts retry with capped backoff; 4xx are counted and skipped (retrying cannot fix them).
+- **Shadow consumer is a separate container, consumer group and DB login** (`sentinel_shadow`: INSERT/SELECT on `shadow_predictions` only). It loads the `candidate` alias with the same ModelManager as serving, scores whole batches, and waits without consuming until a candidate exists. Measured: killing it mid-replay left live complete; it caught up from its committed offset with no duplicates.
+- **Commit only when a batch contains at least one real message** — a batch of broker-only errors (e.g. topic not yet created) has no offset to commit and crashed the first version.

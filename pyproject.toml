@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Safe deployment of malware detection models: release gate, ring rollout, automatic rollback."
 requires-python = ">=3.11,<3.12"
 dependencies = [
+    "confluent-kafka>=2.5",
     "fastapi>=0.115",
     "huggingface-hub>=0.32",
     "lightgbm>=4.5",
@@ -75,7 +76,7 @@ files = ["src"]
 mypy_path = "src"
 
 [[tool.mypy.overrides]]
-module = ["thrember.*", "huggingface_hub.*", "pyarrow.*", "lightgbm.*", "mlflow.*", "sklearn.*"]
+module = ["thrember.*", "huggingface_hub.*", "pyarrow.*", "lightgbm.*", "mlflow.*", "sklearn.*", "confluent_kafka.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

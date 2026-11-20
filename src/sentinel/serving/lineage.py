@@ -35,12 +35,13 @@ class PredictionRecord:
     verdict: str
     override_applied: bool
     ts: datetime
+    event_id: str | None = None  # set for stream events; unique with model_version
 
 
 COLUMNS = tuple(PredictionRecord.__dataclass_fields__)
 INSERT_PREDICTIONS = (
     f"INSERT INTO predictions ({', '.join(COLUMNS)}) "
-    f"VALUES ({', '.join(['%s'] * len(COLUMNS))}) ON CONFLICT (request_id) DO NOTHING"
+    f"VALUES ({', '.join(['%s'] * len(COLUMNS))}) ON CONFLICT DO NOTHING"
 )
 
 BatchWriter = Callable[[Sequence[PredictionRecord]], None]

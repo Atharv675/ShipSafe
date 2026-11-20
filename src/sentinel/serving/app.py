@@ -47,6 +47,7 @@ class ScoreRequest(BaseModel):
     tenant_id: str = Field(min_length=1)
     features: list[float] = Field(min_length=1)
     feature_schema_version: str = Field(min_length=1)
+    event_id: str | None = Field(default=None, min_length=1)  # stream events: idempotency key
 
 
 class ScoreResponse(BaseModel):
@@ -105,8 +106,8 @@ def create_app(
     def score(req: ScoreRequest) -> ScoreResponse:  # sync: runs in the threadpool
         t0 = time.perf_counter()
         request_id = uuid.uuid4().hex
-        for field_name in ("file_id", "tenant_id"):
-            if len(getattr(req, field_name)) > cfg.max_id_length:
+        for field_name in ("file_id", "tenant_id", "event_id"):
+            if len(getattr(req, field_name) or "") > cfg.max_id_length:
                 raise _fail(422, "none", {"error": f"{field_name} longer than limit"})
         model = models.get(req.feature_schema_version)
         if model is None:
@@ -173,6 +174,7 @@ def create_app(
                 verdict=verdict,
                 override_applied=applied,
                 ts=datetime.now(UTC),
+                event_id=req.event_id,
             )
         )
         metrics.inc("requests", {"model_version": label, "status": "200"})

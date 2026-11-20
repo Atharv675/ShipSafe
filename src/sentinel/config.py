@@ -198,6 +198,80 @@ class TrainConfig(_Frozen):
     mlflow: MlflowConfig
 
 
+RetrainPolicyName = Literal["all_history", "last_n_weeks", "recency_weighted"]
+
+
+class RetrainPolicies(_Frozen):
+    all_history: dict[str, Any]
+    last_n_weeks: dict[str, int]
+    recency_weighted: dict[str, float]
+
+    @model_validator(mode="after")
+    def _params(self) -> RetrainPolicies:
+        if self.last_n_weeks.get("n_weeks", 0) < 1:
+            raise ValueError("policies.last_n_weeks.n_weeks must be >= 1")
+        if self.recency_weighted.get("half_life_weeks", 0) <= 0:
+            raise ValueError("policies.recency_weighted.half_life_weeks must be > 0")
+        return self
+
+
+class RetrainConfig(_Frozen):
+    as_of_week: int = Field(ge=2)
+    calibration_weeks: int = Field(ge=1)
+    min_fit_rows: int = Field(gt=0)
+    policy: RetrainPolicyName
+    policies: RetrainPolicies
+    mlflow_alias: str
+
+
+class RingsConfig(_Frozen):
+    ring0_percent: int = Field(ge=0, le=100)
+    ring1_percent: int = Field(ge=0, le=100)
+
+    @model_validator(mode="after")
+    def _sum(self) -> RingsConfig:
+        if self.ring0_percent + self.ring1_percent > 100:
+            raise ValueError("ring0_percent + ring1_percent must be <= 100")
+        return self
+
+
+class ProducerConfig(_Frozen):
+    events_per_second: float = Field(ge=0)
+    linger_ms: int = Field(ge=0)
+    flush_timeout_seconds: float = Field(gt=0)
+
+
+class LiveConsumerConfig(_Frozen):
+    group_id: str
+    api_url: str
+    request_timeout_seconds: float = Field(gt=0)
+    batch_size: int = Field(gt=0)
+    workers: int = Field(gt=0)
+    retry_backoff_seconds: float = Field(gt=0)
+    max_backoff_seconds: float = Field(gt=0)
+
+
+class ShadowConsumerConfig(_Frozen):
+    group_id: str
+    alias: str
+    batch_size: int = Field(gt=0)
+    poll_timeout_seconds: float = Field(gt=0)
+    model_poll_seconds: float = Field(gt=0)
+    db_retry_seconds: float = Field(gt=0)
+
+
+class ReplayConfig(_Frozen):
+    file_type: str
+    topic: str
+    partitions: int = Field(gt=0)
+    bootstrap_servers: str
+    tenants: int = Field(gt=0)
+    rings: RingsConfig
+    producer: ProducerConfig
+    live: LiveConsumerConfig
+    shadow: ShadowConsumerConfig
+
+
 class LineageConfig(_Frozen):
     batch_size: int = Field(gt=0)
     flush_seconds: float = Field(gt=0)
@@ -239,6 +313,14 @@ def load_clean_config(path: Path | None = None) -> CleanConfig:
 
 def load_train_config(path: Path | None = None) -> TrainConfig:
     return TrainConfig.model_validate(load_yaml(path or CONFIG_DIR / "train.yaml"))
+
+
+def load_retrain_config(path: Path | None = None) -> RetrainConfig:
+    return RetrainConfig.model_validate(load_yaml(path or CONFIG_DIR / "retrain.yaml"))
+
+
+def load_replay_config(path: Path | None = None) -> ReplayConfig:
+    return ReplayConfig.model_validate(load_yaml(path or CONFIG_DIR / "replay.yaml"))
 
 
 def load_serving_config(path: Path | None = None) -> ServingConfig:

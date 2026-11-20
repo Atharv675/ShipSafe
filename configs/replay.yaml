@@ -1,0 +1,32 @@
+# Stage 4: replay the cleaned test weeks as a stream; live + shadow scoring.
+file_type: Win64
+topic: file-events
+partitions: 6                     # messages keyed by file_id -> one file always on one partition
+bootstrap_servers: redpanda:9092
+
+tenants: 200                      # synthetic tenants; tenant = stable hash(file_id) % tenants
+rings:                            # ring = stable hash(tenant_id) bucket in 0..99
+  ring0_percent: 5                # buckets 0-4   -> ring0 (5%)
+  ring1_percent: 25               # buckets 5-29  -> ring1 (25%), the rest -> ring2
+
+producer:
+  events_per_second: 0            # replay speed; 0 = as fast as the broker accepts
+  linger_ms: 20
+  flush_timeout_seconds: 120
+
+live:                             # consumer A: calls the serving API (verdicts that count)
+  group_id: live-scorer
+  api_url: http://api:8000
+  request_timeout_seconds: 10
+  batch_size: 64                  # messages fetched and scored concurrently, then committed
+  workers: 8
+  retry_backoff_seconds: 1.0      # 5xx / connection errors are retried (never skipped)
+  max_backoff_seconds: 30.0
+
+shadow:                           # consumer B: separate process, candidate model, no verdicts
+  group_id: shadow-scorer
+  alias: candidate
+  batch_size: 500
+  poll_timeout_seconds: 1.0
+  model_poll_seconds: 30          # re-check the candidate alias
+  db_retry_seconds: 5.0

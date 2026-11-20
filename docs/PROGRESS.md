@@ -1,6 +1,7 @@
 # Progress
 
 > **HANDOFF (2026-11-20)**
+> - **Stage 4 DONE (2026-11-20):** Win64 test weeks 53-64 + never-break set imported to `$SENTINEL_DATA_DIR` (`make import-replay`); candidate `sentinel-win64` v2 (last 26 weeks, T = 52) under alias `candidate`; Redpanda + live/shadow consumers in compose; `make replay WEEKS=...`, `make replay-counts`, `make replay-check`. Weeks 53-55 are already replayed (rows in `predictions` / `shadow_predictions`). **Next: Stage 5 (release gate)** after the owner's go-ahead. Win32 has no candidate or local test weeks yet (same notebook with `FILE_TYPE = "Win32"`).
 > - **Done:** Stages 0-3. Owner decisions: Win64 + Win32 as separate datasets; heavy data/training runs on **Kaggle CPU notebooks** (owner uploads/downloads; Claude never does). Cleaned data is rebuilt per Kaggle session; manifests in `docs/cleaning/` prove it.
 > - **Models:** `sentinel-win64` v1 and `sentinel-win32` v1, alias `production`, MLflow SQLite registry in `$SENTINEL_DATA_DIR/mlflow`; `docs/BASELINE.md`; golden test `tests/golden/v1_metrics.json`.
 > - **Stack:** `make up` (api on http://127.0.0.1:18080, mlflow :5000, jaeger :16686, postgres :5432; secrets in `.env`), `make sample-request`, `make test-integration`, `make down`.
@@ -13,8 +14,8 @@
 | 0 | Repo setup and dataset check [STOP] | DONE |
 | 1 | Data cleaning and data contracts | DONE |
 | 2 | Baseline models and evaluation harness | DONE |
-| 3 | Serving service | DONE (awaiting owner go-ahead) |
-| 4 | Replay stream and shadow scoring | TODO |
+| 3 | Serving service | DONE |
+| 4 | Replay stream and shadow scoring | DONE (awaiting owner go-ahead) |
 | 5 | The release gate | TODO |
 | 6 | Ring rollout and automatic rollback [OPTIONAL] | TODO |
 | 7 | The main experiment | TODO |
@@ -161,3 +162,38 @@ Owner rules: no git/GitHub commands by the assistant; wait for go-ahead after ev
 
 ### Stage 3 DONE (2026-11-20)
 - Done-when met: `make up` works; curl to `/v1/score` works; tests pass (unit + integration); hot-reload design in DECISIONS.md.
+
+## Stage 4 — Replay stream and shadow scoring
+
+### Owner decisions (2026-11-20)
+- A candidate retrained at time T may learn from any week whose labels are known by T (earlier test weeks included); threshold/calibration only from weeks <= T; judged only on weeks after T. v1 and reported baselines stay untouched by test weeks. CLAUDE.md updated.
+- Data comes from Kaggle: one run per dataset (Win64 first) exports the verified test weeks 53-64 + never-break set, and trains ONE candidate (policy last_n_weeks, 26 weeks, T = end of week 52). Local machine: 15.8 GB RAM / Docker 8 GB, too small for full-size retraining.
+
+### Plan
+- `configs/retrain.yaml` + `src/sentinel/models/retrain.py` (policies all_history / last_n_weeks / recency_weighted; reads only weeks <= T, labels known by T); `scripts/retrain_candidate.py` (Kaggle).
+- `src/sentinel/replay/transfer.py` + `scripts/export_replay.py` (Kaggle) / `scripts/import_replay.py` (local): only allow-listed files, sha256 per file, week files must match the rebuilt manifest, manifest must match docs/cleaning (content). `notebooks/stage4_export_and_candidate.ipynb`.
+- Registry: `register_candidate` (new version of sentinel-<type>, alias `candidate`, production untouched).
+- Redpanda in compose (pinned), topic `file-events` keyed by file_id. `src/sentinel/replay/events.py` (event format, stable tenant + ring hashing: ring0 5%, ring1 25%, ring2 rest), `producer.py` (week files in first_seen order, configurable speed), `live_consumer.py` (calls the API; idempotent via (event_id, model_version)), `shadow_consumer.py` (separate process/container, candidate alias, writes `shadow_predictions`; cannot affect live).
+- Tests: retraining never uses a label after T (done); transfer refusals (done); event/ring hashing; producer ordering; idempotency; integration: 2-week replay with matching live/shadow counts, kill shadow mid-run, replay a week twice.
+
+### Check results (2026-11-20)
+- Kaggle run (Win64): rebuild check `identical content` vs `docs/cleaning/Win64.json`. Replay zip 402 MB (sha256 `9a1b4c3d…`), candidate zip 31 MB (sha256 `60a5c252…`); both listed before use, only allow-listed names.
+- `make import-replay` — every file re-hashed and matched; weeks 53-64 (12) + never-break set installed.
+- `make register-candidate` — `sentinel-win64` **v2**, alias `candidate`; `production` still v1. The shadow consumer loaded v2 by itself within 30 s.
+- Candidate v2 (policy last_n_weeks 26, T = 52, fit weeks 23-48 = 259,995 rows, calibration weeks 49-52 = 14,782 rows, seed 20241122, fingerprint `c824866c…`): on its calibration weeks recall 89.84% (CI 89.13-90.50%), FPR 0.095% (7/7,342), threshold 0.9999800; never-break 0/500 flagged. Not a test-week result: the gate (Stage 5) judges it on weeks 53+.
+- `make replay-check`:
+  1. Two-week replay, weeks 53-54: 19,999 events published in 14 s; **live 19,999 events / 19,999 rows (v1), shadow 19,999 / 19,999 (v2)** — counts match, no duplicates.
+  2. Week 55 at 200 events/s, shadow consumer KILLED after 15 s: live finished 9,997/9,997 with no gaps; shadow stopped at 2,270; after restart it caught up to 9,997/9,997 rows — no gaps, no duplicates.
+  3. Week 53 replayed again (9,999 events) and both consumer groups drained to lag 0: still 9,999 rows in each table — no duplicates.
+- Consumer logs over the run: 0 errors in live-consumer and api; shadow's only errors are the expected "alias candidate not found" before registration.
+- `make lint` — ruff + format clean; mypy strict: no issues in 37 source files.
+- `make test` — 155 passed, 1 skipped, coverage 96%.
+- `make test-integration` — 6 passed.
+
+### Issues found and fixed (Stage 4)
+- Redpanda could not write `/etc/redpanda` on a read-only root → tmpfs owned by uid 101; it also rejected the default RPC advertise address → explicit `--rpc-addr` / `--advertise-rpc-addr`.
+- Both consumers crashed (`_NO_OFFSET`) when a batch held only broker errors (topic not yet created) → commit only if a batch has a real message; unit test added.
+- Provenance inside a Kaggle code bundle now records the bundle's file hash next to the commit.
+
+### Stage 4 DONE (2026-11-20)
+- Done-when met: a 2-week replay finished with matching event counts in live and shadow tables (19,999 = 19,999). Plan tests met: shadow killed mid-run → live had no gaps; a week replayed twice → no duplicates; retraining never uses a label after T (unit tests).
