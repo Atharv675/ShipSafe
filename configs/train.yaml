@@ -1,0 +1,50 @@
+# Stage 2 baseline training (rules explained in docs/DECISIONS.md, Stage 2).
+# Weeks are the global week numbers of the cleaned splits: train 01-52, test 53-64.
+# Test weeks are NEVER used for fitting, calibration or thresholds; they are only reported.
+seed: 20241122
+
+# Operating point: every comparison is at this fixed false-positive rate, never at 0.5.
+target_fpr: 0.001
+
+weeks:
+  train_end: 51          # K: models are built from weeks 1..K
+  calibration_weeks: 4   # the last 4 weeks of 1..K are held out from fitting (isotonic + threshold)
+  eval_week: 52          # K+1: validation week for the golden metric
+  as_of_week: 52         # v1 is trained at the END of this week (start of the test replay):
+                         # only labels with label_available_at <= that moment may be used
+
+lightgbm:
+  # Values picked from the official thrember grid (thrember/model.py optimize_model):
+  # num_iterations {500, 1000}, learning_rate {0.005, 0.05}, num_leaves {512, 1024, 2048},
+  # feature_fraction / bagging_fraction {0.5, 0.8, 1.0}. No grid search was run.
+  params:
+    objective: binary
+    boosting_type: gbdt
+    num_iterations: 1000
+    learning_rate: 0.05
+    num_leaves: 1024
+    feature_fraction: 0.5
+    bagging_fraction: 0.5
+    bagging_freq: 1
+    deterministic: true
+    force_col_wise: true
+    verbose: -1
+  # thrember passes these ORIGINAL feature indices as categorical (model.py train_model).
+  categorical_feature_indices: [2, 3, 4, 5, 6, 701, 702]
+
+logreg:
+  max_rows: 200000       # seeded subsample of the fit weeks (full data does not fit in memory as float64)
+  signed_log1p: true     # sign(x) * log1p(|x|): EMBER counts/sizes are heavy-tailed
+  clip: 10.0             # clip standardised values to +-clip
+  C: 1.0
+  max_iter: 1000
+
+calibration:
+  reliability_bins: 10
+
+confidence: 0.95         # Wilson intervals
+
+mlflow:
+  experiment: sentinel-baseline
+  model_name_template: "sentinel-{file_type}"   # registered model per dataset, e.g. sentinel-win64
+  production_alias: production

@@ -20,6 +20,15 @@ class Settings(BaseSettings):
 
     data_dir: Path = Field(default=REPO_ROOT / "data")
     log_level: str = "INFO"
+    mlflow_uri: str | None = None  # default: SQLite registry under data_dir/mlflow
+
+    @property
+    def mlflow_dir(self) -> Path:
+        return self.data_dir / "mlflow"
+
+    @property
+    def tracking_uri(self) -> str:
+        return self.mlflow_uri or f"sqlite:///{(self.mlflow_dir / 'mlflow.db').as_posix()}"
 
     @property
     def raw_dir(self) -> Path:
@@ -126,6 +135,68 @@ class CleanConfig(_Frozen):
         return f"{self.feature_prefix}{index:0{self.feature_index_digits}d}"
 
 
+class TrainWeeks(_Frozen):
+    train_end: int = Field(ge=2)
+    calibration_weeks: int = Field(ge=1)
+    eval_week: int
+    as_of_week: int
+
+    @model_validator(mode="after")
+    def _ordered(self) -> TrainWeeks:
+        if self.calibration_weeks >= self.train_end:
+            raise ValueError("calibration_weeks must leave at least one fit week")
+        if self.eval_week <= self.train_end:
+            raise ValueError("eval_week must come after train_end")
+        if self.as_of_week < self.eval_week:
+            raise ValueError("as_of_week must not be before eval_week")
+        return self
+
+    @property
+    def fit(self) -> list[int]:
+        return list(range(1, self.train_end - self.calibration_weeks + 1))
+
+    @property
+    def calibration(self) -> list[int]:
+        return list(range(self.train_end - self.calibration_weeks + 1, self.train_end + 1))
+
+
+class LightGBMConfig(_Frozen):
+    params: dict[str, Any]
+    categorical_feature_indices: list[int]
+
+
+class LogRegConfig(_Frozen):
+    max_rows: int = Field(gt=0)
+    signed_log1p: bool
+    clip: float = Field(gt=0)
+    C: float = Field(gt=0)
+    max_iter: int = Field(gt=0)
+
+
+class CalibrationConfig(_Frozen):
+    reliability_bins: int = Field(gt=1)
+
+
+class MlflowConfig(_Frozen):
+    experiment: str
+    model_name_template: str
+    production_alias: str
+
+    def model_name(self, file_type: str) -> str:
+        return self.model_name_template.format(file_type=file_type.lower())
+
+
+class TrainConfig(_Frozen):
+    seed: int
+    target_fpr: float = Field(gt=0, lt=1)
+    weeks: TrainWeeks
+    lightgbm: LightGBMConfig
+    logreg: LogRegConfig
+    calibration: CalibrationConfig
+    confidence: float = Field(gt=0, lt=1)
+    mlflow: MlflowConfig
+
+
 def load_yaml(path: Path) -> dict[str, Any]:
     with path.open(encoding="utf-8") as fh:
         loaded = yaml.safe_load(fh)
@@ -140,3 +211,7 @@ def load_data_config(path: Path | None = None) -> DataConfig:
 
 def load_clean_config(path: Path | None = None) -> CleanConfig:
     return CleanConfig.model_validate(load_yaml(path or CONFIG_DIR / "clean.yaml"))
+
+
+def load_train_config(path: Path | None = None) -> TrainConfig:
+    return TrainConfig.model_validate(load_yaml(path or CONFIG_DIR / "train.yaml"))

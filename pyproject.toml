@@ -5,6 +5,8 @@ description = "Safe deployment of malware detection models: release gate, ring r
 requires-python = ">=3.11,<3.12"
 dependencies = [
     "huggingface-hub>=0.32",
+    "lightgbm>=4.5",
+    "mlflow>=2.16",
     "numpy>=1.26",
     "orjson>=3.10",
     "pandas>=2.2",
@@ -13,6 +15,7 @@ dependencies = [
     "pydantic>=2.8",
     "pydantic-settings>=2.4",
     "pyyaml>=6.0",
+    "scikit-learn>=1.5",
     "structlog>=24.4",
     # Official EMBER feature v3 code, pinned to a reviewed commit (not on PyPI).
     "thrember @ git+https://github.com/FutureComputing4AI/EMBER2024@0ef753e81d98bf209f71b03cd331dfc190b5b54d",
@@ -68,7 +71,7 @@ files = ["src"]
 mypy_path = "src"
 
 [[tool.mypy.overrides]]
-module = ["thrember.*", "huggingface_hub.*", "pyarrow.*"]
+module = ["thrember.*", "huggingface_hub.*", "pyarrow.*", "lightgbm.*", "mlflow.*", "sklearn.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

@@ -1,0 +1,29 @@
+{
+ "description": "v1 (LightGBM, alias production) on validation week K+1 at the fixed target FPR. Measured on Kaggle; copied from docs/models/<type>/metrics.json. Change only when v1 is deliberately retrained, and record why in docs/DECISIONS.md.",
+ "target_fpr": 0.001,
+ "recall_tolerance": 0.0,
+ "models": {
+  "Win32": {
+   "week": 52,
+   "threshold_raw": 0.9978448860431376,
+   "tp": 13822,
+   "positives": 15000,
+   "fp": 12,
+   "negatives": 15000,
+   "recall": 0.9214666666666667,
+   "data_fingerprint": "2b87c753b815c9035446bc017db598d3c9184acb096fceaa20f1957fbc3527d4",
+   "feature_schema_version": "6bad8af2adf3d418"
+  },
+  "Win64": {
+   "week": 52,
+   "threshold_raw": 0.9999245600538208,
+   "tp": 4485,
+   "positives": 5000,
+   "fp": 18,
+   "negatives": 5000,
+   "recall": 0.897,
+   "data_fingerprint": "c824866c3eb2b871da9b6f2ae8c5a1da0742e18d5bd1281e509f4bdea6225d5d",
+   "feature_schema_version": "b9521b9b93166b91"
+  }
+ }
+}

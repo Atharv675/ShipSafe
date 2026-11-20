@@ -23,7 +23,7 @@ DATA_RW = "--mount=type=bind,source=$(DATA_DIR),target=/data"
 DOCS_RW = "--mount=type=bind,source=$(SRC)/docs,target=/work/docs"
 
 .PHONY: help lock sandbox setup hooks format lint test data download inspect report bundle \
-	clean-data cleaning-report train gate up down dashboard demo
+	clean-data cleaning-report train baseline-report train-smoke gate up down dashboard demo
 
 help:
 	@echo Targets: setup lint test data download inspect report clean-data cleaning-report bundle lock sandbox train gate up down dashboard demo
@@ -86,8 +86,23 @@ report:
 bundle:
 	$(SANDBOX) "--mount=type=bind,source=$(SRC)/dist,target=/work/dist" $(IMAGE) python scripts/make_bundle.py
 
+# Stage 2. Heavy training runs on Kaggle (notebooks/stage2_train.ipynb) and returns a run
+# bundle zip; `make train BUNDLE=<path to zip>` registers it in the local MLflow registry
+# ($(DATA_DIR)/mlflow) as v1 with alias `production` and re-renders docs/BASELINE.md.
+BUNDLE ?=
 train:
-	@echo "train: implemented in Stage 2" && exit 1
+	@test -n "$(BUNDLE)" || (echo "usage: make train BUNDLE=<path to sentinel_stage2_<type>.zip>" && exit 1)
+	$(SANDBOX) $(DATA_RW) $(DOCS_RW) "--mount=type=bind,source=$(BUNDLE),target=/in/bundle.zip,readonly" \
+		$(IMAGE) python scripts/register_model.py --bundle /in/bundle.zip
+
+baseline-report:
+	$(SANDBOX) $(DOCS_RW) $(IMAGE) python scripts/register_model.py --report-only
+
+# Local real-data smoke run of the full training code (small type, results kept out of docs/).
+SMOKE_TYPE ?= PDF
+train-smoke:
+	$(SANDBOX) $(DATA_RW) $(IMAGE) python scripts/train_baseline.py --file-type $(SMOKE_TYPE) \
+		--skip-manifest-check --out /data/smoke/models/$(SMOKE_TYPE) --threads 4
 
 gate:
 	@echo "gate: implemented in Stage 5" && exit 1

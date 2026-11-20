@@ -15,7 +15,8 @@ from sentinel.config import REPO_ROOT
 from sentinel.provenance import BUNDLE_INFO, git_commit
 
 INCLUDE_FILES = ["pyproject.toml", "uv.lock"]
-INCLUDE_DIRS = ["src", "scripts", "configs"]
+# docs/cleaning: the Stage 1 manifests a Kaggle rebuild is checked against (counts/hashes only).
+INCLUDE_DIRS = ["src", "scripts", "configs", "docs/cleaning"]
 EXCLUDE_PARTS = {"__pycache__", ".mypy_cache", ".ruff_cache", ".pytest_cache"}
 OUT = REPO_ROOT / "dist" / "sentinel_gate_code.zip"
 

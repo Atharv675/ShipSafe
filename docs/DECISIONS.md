@@ -57,3 +57,29 @@ Contracts, versioning, late labels
 - **Never-break set**: 500 benign files from TRAIN weeks only, spread evenly over the 52 weeks (10 in each of the first 32 weeks, 9 in the rest), within a week the files with the smallest seeded draw — documented, reproducible, covers the whole year; files stay in training too (it is a regression check, not a held-out set) — *top-N by a model score* (no model yet; circular).
 - **Provenance**: manifest records seed, data fingerprint (sha256 over the raw zip hashes), git commit (or bundle commit), per-file sha256, row counts per step.
 - **`pandera` 0.35.0** added — the plan names it; resolved under `exclude-newer`.
+
+## Stage 2
+Owner's choice (2026-11-19): train **Win64 and Win32 separately** (one model, one Kaggle run, one registered model each).
+
+Windows and data
+- **K = 51; fit on weeks 1-47, calibrate + set threshold on weeks 48-51, validate on week 52 (K+1)** (`configs/train.yaml`) — later stages replay the TEST weeks 53-64 with v1 as production, so v1 must be built from train weeks only; the plan's golden metric is "recall at 0.1% FPR on week K+1" — *K = 52 with a test week as K+1* (would tune on test data).
+- **Four calibration weeks, not one** — the plan says "a held-out calibration week"; at 0.1% FPR one Win64 week (5,000 benign) puts the threshold on its 5 highest benign scores, too noisy. Four weeks give ~4x the benign files — *one week*.
+- **v1 is trained "as of" the end of week 52** (the moment the replay starts) and only sees labels with `label_available_at` <= then (Stage 1 late-label rule). Measured on PDF: 0 fit rows dropped, ~39% of calibration-week rows not yet labelled — *ignoring label delay* (would leak future labels).
+- **Evaluation on week 52 and the test weeks uses all rows (ground truth)** — evaluation is retrospective; nothing measured there feeds back into the model, threshold or calibration.
+- **Test weeks 53-64 are scored for the report only**; hyperparameters were fixed before any test week was scored and are not changed because of it.
+- **Rebuilt splits are checked by CONTENT against `docs/cleaning/<type>.json`** (row counts per step and week, dropped columns, feature_schema_version, data fingerprint), not by file sha256 — adding MLflow downgraded pyarrow 26 -> 25.0.1, and Parquet bytes embed the writer version — *pinning pyarrow 26* (MLflow 3.17 requires < 26).
+- **Parquet stores `timestamp[s]` as milliseconds** (the format has no seconds unit); the instant is identical. The Stage 1 manifests still name the column `timestamp[s, UTC]` (part of `feature_schema_version`, so unchanged); readers normalise units before comparing (a unit mix-up was caught by tests).
+
+Models
+- **LightGBM params from the official thrember grid** (`num_iterations` 1000, `learning_rate` 0.05, `num_leaves` 1024, feature/bagging fraction 0.5), thrember's categorical columns (original indices 2-6, 701, 702), `deterministic`, fixed seed; no grid search — thrember ships a grid but no single tuned set; a grid search on 1.4M x 2.5k rows does not fit the Kaggle budget — *thrember's `train_model` defaults* (100 trees: plain LightGBM defaults, not a tuned choice).
+- **Fixed iteration count, no early stopping** — early stopping would use the calibration weeks twice (stopping + isotonic/threshold).
+- **Logistic regression: signed log1p, standardise, clip +-10, L2 (C=1), seeded subsample of 200,000 fit rows** — EMBER counts are heavy-tailed; full Win32 as float64 is ~28 GB — *SGD over all rows* (more code, slower to converge, not needed for a baseline).
+- **Isotonic calibration on the calibration weeks; decisions use the RAW score threshold** — isotonic is a step function and maps many top scores to one probability, so an FPR-controlled threshold on calibrated scores would be coarse; the calibrated probability is reported (ECE) and returned as `probability` — *threshold on calibrated score*.
+- **Threshold rule: flag if score > t, t = the k-th highest benign calibration score with k = floor(target_fpr x n_benign)** — never exceeds the target on the calibration set even with ties.
+- **Wilson score intervals** for recall and FPR — accurate for rates near 0 or 1 and small counts (FPR at 0.1%), unlike the normal approximation.
+- **Models saved as LightGBM text + npz arrays (no pickles)**; the registry model is an MLflow pyfunc returning `raw_score`, `probability`, `verdict`.
+
+Registry
+- **Training on Kaggle produces a run bundle; registration happens locally in the sandbox** (`make train BUNDLE=...`) into an MLflow SQLite registry in `$SENTINEL_DATA_DIR/mlflow` — MLflow stores absolute artifact paths, so a registry built on Kaggle would not move; the registry belongs next to the serving stack (Stage 3) — *MLflow on Kaggle*. Params, metrics, feature_schema_version, data fingerprint and git commit are logged from the bundle; LightGBM is registered as `sentinel-<type>` and aliased `production`; LR is logged as a comparison run.
+- **One registered model per dataset** (`sentinel-win64`, `sentinel-win32`) — matches "train separately"; each has its own production alias.
+- **`structlog` writes to the current `sys.stderr` on every call** — the stock PrintLogger kept a stream that test runners/notebooks later close (caused a crash in tests).
