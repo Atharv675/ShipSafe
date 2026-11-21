@@ -12,6 +12,7 @@ from __future__ import annotations
 import math
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass
+from fractions import Fraction
 from statistics import NormalDist
 from typing import Any
 
@@ -221,6 +222,61 @@ def per_week_metrics(
             {"week": int(w), **rates_at_threshold(yy[m], ss[m], threshold, confidence).as_dict()}
         )
     return out
+
+
+# ---------------------------------------------------------------------------- paired comparison
+
+
+@dataclass(frozen=True)
+class PairedTable:
+    """2x2 table of two models' correctness on the SAME files.
+
+    `only_a_right` / `only_b_right` are the discordant ("flipped") cells McNemar tests."""
+
+    both_right: int
+    only_a_right: int
+    only_b_right: int
+    both_wrong: int
+
+    @property
+    def discordant(self) -> int:
+        return self.only_a_right + self.only_b_right
+
+    def as_dict(self) -> dict[str, int]:
+        return {**asdict(self), "discordant": self.discordant}
+
+
+def paired_table(y: ArrayLike, flagged_a: ArrayLike, flagged_b: ArrayLike) -> PairedTable:
+    """A model is right on a file when it flags a malicious file or passes a benign one."""
+    yy = np.asarray(y).astype(np.int8)
+    fa, fb = np.asarray(flagged_a, dtype=bool), np.asarray(flagged_b, dtype=bool)
+    if not (yy.shape == fa.shape == fb.shape) or yy.ndim != 1:
+        raise ValueError("y and both flag arrays must be 1-D and the same length")
+    if not np.isin(yy, (0, 1)).all():
+        raise ValueError("y must contain only 0 (benign) and 1 (malicious)")
+    truth = yy == 1
+    ra, rb = fa == truth, fb == truth
+    return PairedTable(
+        both_right=int((ra & rb).sum()),
+        only_a_right=int((ra & ~rb).sum()),
+        only_b_right=int((~ra & rb).sum()),
+        both_wrong=int((~ra & ~rb).sum()),
+    )
+
+
+def mcnemar_exact(b: int, c: int) -> float:
+    """Two-sided exact McNemar p-value from the two discordant counts.
+
+    Under "both models are equally good", each disagreement is a fair coin flip, so
+    min(b, c) ~ Binomial(b + c, 1/2); p = 2 * P(X <= min(b, c)), capped at 1. Computed with
+    exact integers (no normal approximation, valid for small counts)."""
+    if b < 0 or c < 0:
+        raise ValueError("counts must be >= 0")
+    n = b + c
+    if n == 0:
+        return 1.0
+    tail = sum(math.comb(n, i) for i in range(min(b, c) + 1))
+    return min(1.0, float(Fraction(2 * tail, 2**n)))
 
 
 # ---------------------------------------------------------------------------- operations

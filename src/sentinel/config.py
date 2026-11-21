@@ -261,7 +261,7 @@ class ShadowConsumerConfig(_Frozen):
 
 
 class ReplayConfig(_Frozen):
-    file_type: str
+    file_types: list[str] = Field(min_length=1)  # the shadow consumer loads one candidate each
     topic: str
     partitions: int = Field(gt=0)
     bootstrap_servers: str
@@ -295,6 +295,51 @@ class ServingConfig(_Frozen):
     overrides: OverridesConfig
 
 
+GateCheckName = Literal[
+    "coverage",
+    "recall_at_fpr",
+    "false_alarms",
+    "disagreement",
+    "never_break",
+    "weekly_regression",
+    "calibration",
+]
+
+
+class GatePolicy(_Frozen):
+    policy_version: str = Field(min_length=1)
+    file_types: list[str] = Field(min_length=1)  # the same rules apply to each type separately
+    operating_fpr: float = Field(gt=0, lt=1)
+    min_recall_gain: float
+    max_fpr_increase_relative: float = Field(ge=0)
+    never_break_hits_allowed: int = Field(ge=0)
+    max_weekly_recall_drop: float = Field(ge=0, le=1)
+    min_disagreements: int = Field(ge=1)
+    confidence: float = Field(gt=0, lt=1)
+    max_ece_increase: float = Field(ge=0)
+    calibration_bins: int = Field(gt=1)
+    min_coverage: float = Field(gt=0, le=1)
+    min_false_alarms_pooled: int = Field(ge=1)
+    min_false_alarms_weekly: int = Field(ge=1)
+    label_wait_days: float = Field(ge=0)
+    soft_checks: list[GateCheckName]
+    approved_alias: str = Field(min_length=1)
+
+    @property
+    def alpha(self) -> float:
+        return 1 - self.confidence
+
+    def file_type(self, requested: str | None) -> str:
+        """The file type to judge: the one requested, or the only one the policy covers."""
+        if requested is None:
+            if len(self.file_types) != 1:
+                raise ValueError(f"choose a file type: the policy covers {self.file_types}")
+            return self.file_types[0]
+        if requested not in self.file_types:
+            raise ValueError(f"{requested!r} is not covered by the policy ({self.file_types})")
+        return requested
+
+
 def load_yaml(path: Path) -> dict[str, Any]:
     with path.open(encoding="utf-8") as fh:
         loaded = yaml.safe_load(fh)
@@ -321,6 +366,10 @@ def load_retrain_config(path: Path | None = None) -> RetrainConfig:
 
 def load_replay_config(path: Path | None = None) -> ReplayConfig:
     return ReplayConfig.model_validate(load_yaml(path or CONFIG_DIR / "replay.yaml"))
+
+
+def load_gate_policy(path: Path | None = None) -> GatePolicy:
+    return GatePolicy.model_validate(load_yaml(path or CONFIG_DIR / "gate_policy.yaml"))
 
 
 def load_serving_config(path: Path | None = None) -> ServingConfig:

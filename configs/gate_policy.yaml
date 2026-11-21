@@ -1,0 +1,41 @@
+# Stage 5 release gate. Every statistical choice is explained in docs/DECISIONS.md (Stage 5).
+# Bump policy_version whenever a rule changes: it is recorded in every evidence bundle.
+policy_version: "1.0.0"
+# The same rules judge each file type on its own data (`make gate FILE_TYPE=...`).
+file_types: [Win64, Win32]
+
+# Operating point: recall is compared at this FIXED false-positive rate (never at 0.5).
+operating_fpr: 0.001
+# (a) candidate recall at the operating FPR minus production's must be >= this
+min_recall_gain: 0.0
+# (a') false-positive rate at each model's SHIPPED threshold (what users would see):
+#      candidate FPR <= production FPR * (1 + this)
+max_fpr_increase_relative: 0.10
+# (c) never-break files the candidate may flag
+never_break_hits_allowed: 0
+# (d) in no single week may candidate recall (at the operating FPR) fall more than this below production
+max_weekly_recall_drop: 0.02
+# (b) fewer discordant files than this (both classes together) -> INSUFFICIENT_EVIDENCE
+min_disagreements: 30
+# McNemar significance level = 1 - confidence; Wilson intervals at this confidence
+confidence: 0.95
+# (e) calibration: candidate ECE may exceed production ECE by at most this (soft check)
+max_ece_increase: 0.01
+calibration_bins: 10
+
+# Evidence sufficiency
+# Share of the evaluated weeks' events that must have BOTH a live and a shadow score.
+min_coverage: 0.99
+# A fixed-FPR threshold needs enough benign files: n_benign * operating_fpr must be >= this
+# (pooled for check a; per week for check d).
+min_false_alarms_pooled: 5
+min_false_alarms_weekly: 1
+# Late labels: the gate decides this many days after the last evaluated week ends and uses
+# only labels known by then (Stage 1 late-label delay is at most 28 days).
+label_wait_days: 28
+
+# Hard checks decide; a failed soft check is reported in the reason but does not block.
+soft_checks: [calibration]
+
+# On PROMOTE the gate moves this alias to the candidate (production is never touched here).
+approved_alias: candidate_approved

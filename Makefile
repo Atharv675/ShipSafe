@@ -25,6 +25,7 @@ DOCS_RW = "--mount=type=bind,source=$(SRC)/docs,target=/work/docs"
 .PHONY: help lock sandbox setup hooks format lint test data download inspect report bundle \
 	clean-data cleaning-report train baseline-report train-smoke gate up down sample-request \
 	test-integration migrate import-replay register-candidate replay replay-counts replay-check \
+	gate-verify \
 	dashboard demo
 
 help:
@@ -107,8 +108,26 @@ train-smoke:
 	$(SANDBOX) $(DATA_RW) $(IMAGE) python scripts/train_baseline.py --file-type $(SMOKE_TYPE) \
 		--skip-manifest-check --out /data/smoke/models/$(SMOKE_TYPE) --threads 4
 
+# Stage 5 release gate (stack running): e.g. make gate CANDIDATE=2 [FILE_TYPE=Win32]
+# [GATE_WEEKS="53 54 55"]. Reads live + shadow scores as `sentinel_gate`, appends to
+# gate_decisions, writes docs/gate/, and on PROMOTE moves the `candidate_approved` alias
+# (needs the registry mounted writable).
+# FILE_TYPE also picks the type for `make replay` and `make replay-counts`.
+FILE_TYPE ?= Win64
+CANDIDATE ?=
+GATE_WEEKS ?=
+gate: export SENTINEL_GATE_DSN = postgresql://sentinel_gate:$(SENTINEL_GATE_DB_PASSWORD)@postgres:5432/sentinel
 gate:
-	@echo "gate: implemented in Stage 5" && exit 1
+	@test -n "$(CANDIDATE)" || (echo "usage: make gate CANDIDATE=<registered version>" && exit 1)
+	$(SANDBOX_NET) --network=sentinel_default -e SENTINEL_GATE_DSN -e GIT_PYTHON_REFRESH=quiet \
+		$(DATA_RW) $(DOCS_RW) $(IMAGE) python -m sentinel.gate.run --candidate $(CANDIDATE) \
+		--file-type $(FILE_TYPE) $(if $(GATE_WEEKS),--weeks $(GATE_WEEKS))
+
+# Re-hash every stored gate decision and compare with docs/gate/*.json (tamper check).
+gate-verify: export SENTINEL_GATE_DSN = postgresql://sentinel_gate:$(SENTINEL_GATE_DB_PASSWORD)@postgres:5432/sentinel
+gate-verify:
+	$(SANDBOX_NET) --network=sentinel_default -e SENTINEL_GATE_DSN $(IMAGE) \
+		python -m sentinel.gate.run verify
 
 # Stage 3: local stack (api, postgres, mlflow, jaeger), hardened, ports on 127.0.0.1 only.
 COMPOSE = docker compose
@@ -132,9 +151,11 @@ sample-request:
 # DSNs travel through the environment (-e NAME, no value) so make never echoes the secrets.
 test-integration: export SENTINEL_IT_ADMIN_DSN = postgresql://sentinel_admin:$(SENTINEL_PG_ADMIN_PASSWORD)@postgres:5432/sentinel
 test-integration: export SENTINEL_IT_API_DSN = postgresql://sentinel_api:$(SENTINEL_API_DB_PASSWORD)@postgres:5432/sentinel
+test-integration: export SENTINEL_IT_GATE_DSN = postgresql://sentinel_gate:$(SENTINEL_GATE_DB_PASSWORD)@postgres:5432/sentinel
 test-integration:
 	$(SANDBOX_NET) --network=sentinel_default -e GIT_PYTHON_REFRESH=quiet \
 		-e SENTINEL_API_URL=http://api:8000 -e SENTINEL_IT_ADMIN_DSN -e SENTINEL_IT_API_DSN \
+		-e SENTINEL_IT_GATE_DSN \
 		$(DATA_RO) $(IMAGE) pytest -m integration --no-cov tests/integration
 
 dashboard:
@@ -149,6 +170,9 @@ migrate:
 	$(COMPOSE) exec -T postgres psql -v ON_ERROR_STOP=1 -U sentinel_admin -d sentinel \
 		-f /docker-entrypoint-initdb.d/003_stage4.sql
 	$(COMPOSE) exec -T postgres sh /docker-entrypoint-initdb.d/004_shadow_role.sh
+	$(COMPOSE) exec -T postgres psql -v ON_ERROR_STOP=1 -U sentinel_admin -d sentinel \
+		-f /docker-entrypoint-initdb.d/005_stage5.sql
+	$(COMPOSE) exec -T postgres sh /docker-entrypoint-initdb.d/006_gate_role.sh
 
 # Verify + install a Kaggle replay export (test weeks + never-break set).
 ZIP ?=
@@ -167,14 +191,15 @@ register-candidate:
 WEEKS ?= 53 54
 EPS ?=
 replay:
-	$(COMPOSE) --profile tools run --rm producer --weeks $(WEEKS) $(if $(EPS),--events-per-second $(EPS))
+	$(COMPOSE) --profile tools run --rm producer --weeks $(WEEKS) --file-type $(FILE_TYPE) \
+		$(if $(EPS),--events-per-second $(EPS))
 
 # Counts for replayed weeks (sandbox on the compose network), e.g. ARGS="snapshot --weeks 53".
 ARGS ?= snapshot --weeks 53 54
 replay-counts: export SENTINEL_IT_ADMIN_DSN = postgresql://sentinel_admin:$(SENTINEL_PG_ADMIN_PASSWORD)@postgres:5432/sentinel
 replay-counts:
 	@$(SANDBOX_NET) --network=sentinel_default -e SENTINEL_IT_ADMIN_DSN $(DATA_RO) $(IMAGE) \
-		python scripts/replay_counts.py $(ARGS)
+		python scripts/replay_counts.py $(ARGS) --file-type $(FILE_TYPE)
 
 # The three Stage 4 checks end to end (2-week replay, kill shadow mid-run, replay twice).
 replay-check:

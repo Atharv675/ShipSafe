@@ -150,7 +150,7 @@ def main() -> None:  # pragma: no cover - exercised by `make replay`
     cfg = load_replay_config()
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--weeks", type=int, nargs="+", required=True)
-    p.add_argument("--file-type", default=cfg.file_type)
+    p.add_argument("--file-type", default=cfg.file_types[0], choices=cfg.file_types)
     p.add_argument("--events-per-second", type=float, default=cfg.producer.events_per_second)
     args = p.parse_args()
     configure_logging(settings.log_level)

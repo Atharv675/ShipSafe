@@ -1,6 +1,8 @@
 # Progress
 
-> **HANDOFF (2026-11-20)**
+> **HANDOFF (2026-11-21)**
+> - **Win32 through Stages 4-5 (2026-11-21):** `sentinel-win32` v2 candidate registered, weeks 53-55 replayed (89,998 = 89,998), gate → **REJECT** (`docs/gate/Win32-v2-vs-v1-20261121T062053Z.md`). Use `FILE_TYPE=Win32` with `make replay`, `make replay-counts` and `make gate`. **Next: Stage 6 (OPTIONAL) or Stage 7** after the owner's go-ahead.
+> - **Stage 5 DONE (2026-11-20):** `make gate CANDIDATE=<v> [GATE_WEEKS=...]`, `make gate-verify`, policy `configs/gate_policy.yaml` (v1.0.0), decisions in append-only `gate_decisions` + `docs/gate/`. First real decision: Win64 v2 vs v1 on weeks 53-55 → **REJECT**. Run `make migrate` on an existing database (adds gate_decisions + `sentinel_gate`; needs `SENTINEL_GATE_DB_PASSWORD` in `.env` and `docker compose up -d postgres` first). **Next: Stage 6 (ring rollout, OPTIONAL)** after the owner's go-ahead.
 > - **Stage 4 DONE (2026-11-20):** Win64 test weeks 53-64 + never-break set imported to `$SENTINEL_DATA_DIR` (`make import-replay`); candidate `sentinel-win64` v2 (last 26 weeks, T = 52) under alias `candidate`; Redpanda + live/shadow consumers in compose; `make replay WEEKS=...`, `make replay-counts`, `make replay-check`. Weeks 53-55 are already replayed (rows in `predictions` / `shadow_predictions`). **Next: Stage 5 (release gate)** after the owner's go-ahead. Win32 has no candidate or local test weeks yet (same notebook with `FILE_TYPE = "Win32"`).
 > - **Done:** Stages 0-3. Owner decisions: Win64 + Win32 as separate datasets; heavy data/training runs on **Kaggle CPU notebooks** (owner uploads/downloads; Claude never does). Cleaned data is rebuilt per Kaggle session; manifests in `docs/cleaning/` prove it.
 > - **Models:** `sentinel-win64` v1 and `sentinel-win32` v1, alias `production`, MLflow SQLite registry in `$SENTINEL_DATA_DIR/mlflow`; `docs/BASELINE.md`; golden test `tests/golden/v1_metrics.json`.
@@ -15,8 +17,8 @@
 | 1 | Data cleaning and data contracts | DONE |
 | 2 | Baseline models and evaluation harness | DONE |
 | 3 | Serving service | DONE |
-| 4 | Replay stream and shadow scoring | DONE (awaiting owner go-ahead) |
-| 5 | The release gate | TODO |
+| 4 | Replay stream and shadow scoring | DONE |
+| 5 | The release gate | DONE (awaiting owner go-ahead) |
 | 6 | Ring rollout and automatic rollback [OPTIONAL] | TODO |
 | 7 | The main experiment | TODO |
 | 8 | Observability, alerts and load testing | TODO |
@@ -197,3 +199,42 @@ Owner rules: no git/GitHub commands by the assistant; wait for go-ahead after ev
 
 ### Stage 4 DONE (2026-11-20)
 - Done-when met: a 2-week replay finished with matching event counts in live and shadow tables (19,999 = 19,999). Plan tests met: shadow killed mid-run → live had no gaps; a week replayed twice → no duplicates; retraining never uses a label after T (unit tests).
+
+## Stage 5 — The release gate
+
+### Plan
+- `configs/gate_policy.yaml` (versioned, `policy_version` 1.0.0) → `GatePolicy`.
+- `evaluate.py`: `paired_table` (2x2 correctness table) and `mcnemar_exact` (exact two-sided, integer arithmetic).
+- `src/sentinel/gate/checks.py` (pure): coverage, (a) recall at fixed FPR + Wilson CIs, (a') false alarms at shipped thresholds, (b) disagreement + McNemar per class + flipped files, (c) never-break, (d) per-week regression, (e) calibration ECE (soft); `decide`.
+- `src/sentinel/gate/evidence.py`: canonical JSON, SHA-256, verify, Markdown report. `src/sentinel/gate/run.py`: pairs live/shadow scores by event id, labels known at decision time, refuses weeks <= a model's as_of_week, stores the decision, writes `docs/gate/`, moves `candidate_approved` on PROMOTE only.
+- `docker/postgres/init/005_stage5.sql` (append-only `gate_decisions`, hash CHECK, triggers) + `006_gate_role.sh` (`sentinel_gate`). `make gate CANDIDATE=<v>`, `make gate-verify`.
+
+### Check results (2026-11-20)
+- `make lint` — clean; mypy strict: no issues in 40 source files.
+- `make test` — 188 passed, 2 skipped, coverage 97% (gate/checks 97%, gate/evidence 93%, evaluate 99%). Plan tests: clearly better synthetic candidate → PROMOTE; 10× false alarms → REJECT; identical candidate and 6+6 balanced flips → INSUFFICIENT_EVIDENCE; never-break hit → REJECT; one collapsed week → REJECT; editing a stored bundle (DB text or report file) is detected by hash; McNemar = `scipy.stats.binomtest` on 9 cases incl. (0,0) and (450,520). Also: low coverage / too few clean files → insufficient; soft calibration failure does not block; no evaluation on weeks <= as_of; late labels respected; stored-threshold mismatch stops the gate.
+- `make test-integration` — 9 passed (3 new): `sentinel_gate` can insert/read but not update/delete; even the owner cannot UPDATE/DELETE/TRUNCATE (trigger); the DB rejects a hash that does not match the bundle. Run in rolled-back transactions.
+- **Real gate run** `make gate CANDIDATE=2` (Win64 v2 last-26-weeks retrain vs production v1, weeks 53-55, 29,996 / 29,996 events paired, all labels known by 2024-11-09) → **REJECT**, report `docs/gate/Win64-v2-vs-v1-20261120T171839Z.md`, bundle SHA-256 `580301ef…`:
+  - recall at 0.1% FPR: candidate 86.86% (CI 86.31-87.39) vs production 87.49% (86.95-88.01), −0.63 points → fail;
+  - shipped thresholds: candidate 17 false alarms / 14,996 clean (0.11%) vs production 27 (0.18%) → pass (better);
+  - disagreements: malware 525 production-only catches vs 85 candidate-only (McNemar p = 2.4e-78) → candidate significantly worse; clean files 12 false alarms cleared vs 2 added (p = 0.013) → candidate better;
+  - never-break 0/500 (both) → pass; week 53 recall drop 4.42 points (> 2) → fail; weeks 54/55 candidate better (+1.18, +0.58);
+  - ECE 0.0044 vs 0.0024 (soft, within +0.01) → pass.
+  - Plain reading: the recent-data-only candidate trades ~440 extra missed malware files for 10 fewer false alarms over three weeks, and is worse at equal false alarms. Not safe to replace v1.
+- `make gate-verify` — 1 decision, 0 problems. Production alias unchanged (v1); `candidate_approved` not set.
+
+### Stage 5 DONE (2026-11-20)
+- Done-when met: the gate ran on a real candidate and wrote a readable decision (`docs/gate/*.md`); DECISIONS.md explains McNemar and the fixed FPR in plain words.
+
+### Win32 through Stages 4-5 (2026-11-21)
+- Code: `replay.yaml` and `gate_policy.yaml` now list `file_types: [Win64, Win32]`; the shadow consumer loads one candidate per type (waits until all exist); `make replay|replay-counts|gate ... FILE_TYPE=Win32` (default Win64); `GatePolicy.file_type()` refuses an uncovered or unchosen type. Rules unchanged (policy 1.0.0). See DECISIONS.md "Win32 added".
+- Kaggle Stage 4 notebook run with `FILE_TYPE = "Win32"`. `make import-replay`: weeks 53-64 + never-break verified and installed. `make register-candidate`: `sentinel-win32` v2 (last 26 weeks, T = 52) under `candidate`; `rebuild_check.json` "identical content" vs `docs/cleaning/Win32.json`; never-break 0/500; calibration-weeks recall 86.3% at FPR 0.10%.
+- `make up` (app image rebuilt): shadow consumer loaded Win64 v2 and Win32 v2 (311 MiB of 2 GiB).
+- `make replay FILE_TYPE=Win32 WEEKS="53 54 55"`: 89,998 events in 92 s; live 89,998 rows (`sentinel-win32/1`) = shadow 89,998 rows (`sentinel-win32/2`), no duplicates.
+- **Gate** `make gate CANDIDATE=2 FILE_TYPE=Win32` → **REJECT**, `docs/gate/Win32-v2-vs-v1-20261121T062053Z.md`, SHA-256 `6faa08fc…`:
+  - recall at 0.1% FPR: candidate 92.91% (CI 92.67-93.15) vs production 94.40% (94.18-94.61), −1.49 points → fail;
+  - shipped thresholds: 23 vs 26 false alarms on 44,998 clean files → pass;
+  - disagreements: malware 1,191 production-only catches vs 193 candidate-only (p = 1.1e-175) → candidate significantly worse; clean files 12 cleared vs 9 added (p = 0.66) → no real difference;
+  - never-break 0/500 → pass; weekly drops 0.84 / 1.53 / 1.43 points (all < 2) → pass; ECE 0.0033 vs 0.0028 (soft) → pass.
+  - Plain reading: same pattern as Win64. Retraining on the last 26 weeks only, with a stricter threshold, misses about 1,000 more malware files in three weeks without a real cut in false alarms. Not safe to replace v1.
+- `make lint` clean; `make test` 189 passed (2 skipped, 97%); `make test-integration` 9 passed; `make gate-verify` 2 decisions, 0 problems. Production aliases unchanged; `candidate_approved` not set.
+- Note: both bundles record git `fd6009a…` (the last commit); the Stage 5 code was uncommitted when they ran.

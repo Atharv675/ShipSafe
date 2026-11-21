@@ -1,5 +1,6 @@
 # Stage 4: replay the cleaned test weeks as a stream; live + shadow scoring.
-file_type: Win64
+file_types: [Win64, Win32]        # one candidate per type in the shadow consumer; the producer
+                                  # publishes one type per run (--file-type, default the first)
 topic: file-events
 partitions: 6                     # messages keyed by file_id -> one file always on one partition
 bootstrap_servers: redpanda:9092

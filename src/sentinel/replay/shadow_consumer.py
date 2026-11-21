@@ -179,9 +179,12 @@ def main() -> None:  # pragma: no cover - runs in the shadow-consumer container
     stop = threading.Event()
     signal.signal(signal.SIGTERM, lambda *_: stop.set())
     signal.signal(signal.SIGINT, lambda *_: stop.set())
-    name = load_train_config().mlflow.model_name(cfg.file_type)
-    source = MlflowModelSource(settings.tracking_uri, {name: cfg.file_type}, predict_threads=0)
-    models = ModelManager(source, {cfg.file_type: name}, cfg.shadow.alias)
+    names = {ft: load_train_config().mlflow.model_name(ft) for ft in cfg.file_types}
+    source = MlflowModelSource(
+        settings.tracking_uri, {n: ft for ft, n in names.items()}, predict_threads=0
+    )
+    # `ready` needs a candidate for EVERY type, so no event is consumed (and skipped) early.
+    models = ModelManager(source, names, cfg.shadow.alias)
     consumer = Consumer(
         {
             "bootstrap.servers": cfg.bootstrap_servers,

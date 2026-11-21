@@ -137,6 +137,7 @@ def test_replay_config_file_is_valid() -> None:
     assert (cfg.rings.ring0_percent, cfg.rings.ring1_percent) == (5, 25)
     assert cfg.live.group_id != cfg.shadow.group_id  # separate consumer groups
     assert cfg.shadow.alias == "candidate"
+    assert cfg.file_types == ["Win64", "Win32"]  # shadow loads a candidate for each
 
 
 # ------------------------------------------------------------------ producer
