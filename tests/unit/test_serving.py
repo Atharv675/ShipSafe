@@ -211,7 +211,11 @@ def test_models_and_stats_endpoints() -> None:
         c.post("/v1/score", json=_body())
         models = c.get("/v1/models").json()
         stats = c.get("/v1/ops/stats").json()
-    assert [m["current"]["version"] for m in models] == ["1", "1"]
+    # one entry per (ring, file type); a bare ModelManager serves every ring (Stage 3 mode)
+    assert [(m["ring"], m["file_type"]) for m in models] == [
+        (r, ft) for r in ("ring0", "ring1", "ring2") for ft in ("Win64", "Win32")
+    ]
+    assert [m["current"]["version"] for m in models] == ["1"] * 6
     assert models[0]["current"]["n_features"] == DIM
     lat = [x for x in stats if x["metric"] == "latency_ms"]
     assert lat

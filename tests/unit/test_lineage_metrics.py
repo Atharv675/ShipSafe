@@ -44,8 +44,8 @@ def _wait(cond: object, timeout: float = 5.0) -> None:
 
 def test_insert_statement_matches_record_fields() -> None:
     assert COLUMNS[0] == "request_id"
-    assert len(COLUMNS) == 11
-    assert COLUMNS[-1] == "event_id"
+    assert len(COLUMNS) == 12
+    assert COLUMNS[-2:] == ("event_id", "ring")  # Stage 4 event id, Stage 6 ring
     assert INSERT_PREDICTIONS.count("%s") == len(COLUMNS)
     assert "ON CONFLICT DO NOTHING" in INSERT_PREDICTIONS
 

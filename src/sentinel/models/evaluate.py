@@ -309,3 +309,49 @@ def latency_summary(values: ArrayLike) -> LatencySummary:
         raise ValueError("values must be finite")
     p50, p95, p99 = np.percentile(v, [50, 95, 99])
     return LatencySummary(int(v.size), float(v.sum()), float(p50), float(p95), float(p99))
+
+
+@dataclass(frozen=True)
+class RateComparison:
+    """A candidate's rate (e.g. share of files flagged) against production's."""
+
+    candidate: int
+    candidate_n: int
+    production: int
+    production_n: int
+    candidate_ci: tuple[float, float]
+    production_ci: tuple[float, float]
+    limit: float  # breach when candidate_ci[0] > limit
+    breach: bool
+
+    def as_dict(self) -> dict[str, Any]:
+        d = asdict(self)
+        d["candidate_rate"] = self.candidate / self.candidate_n if self.candidate_n else None
+        d["production_rate"] = self.production / self.production_n if self.production_n else None
+        return d
+
+
+def rate_increase_check(
+    candidate: int,
+    candidate_n: int,
+    production: int,
+    production_n: int,
+    max_relative_increase: float,
+    confidence: float = 0.95,
+) -> RateComparison:
+    """Is the candidate's rate CLEARLY above production's, beyond the allowed increase?
+
+    Breach only when the lower Wilson bound of the candidate's rate exceeds the upper Wilson
+    bound of production's times (1 + max_relative_increase). Both intervals must be cleared,
+    so a handful of events can never cause a breach by noise; with no events on either side
+    there is nothing to compare and no breach.
+    """
+    if max_relative_increase < 0:
+        raise ValueError("max_relative_increase must be >= 0")
+    c_ci = wilson_interval(candidate, candidate_n, confidence)
+    p_ci = wilson_interval(production, production_n, confidence)
+    limit = p_ci[1] * (1 + max_relative_increase)
+    breach = candidate_n > 0 and production_n > 0 and c_ci[0] > limit
+    return RateComparison(
+        candidate, candidate_n, production, production_n, c_ci, p_ci, limit, breach
+    )

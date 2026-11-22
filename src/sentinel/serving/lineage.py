@@ -36,6 +36,7 @@ class PredictionRecord:
     override_applied: bool
     ts: datetime
     event_id: str | None = None  # set for stream events; unique with model_version
+    ring: str | None = None  # Stage 6: the tenant's rollout ring that chose the model
 
 
 COLUMNS = tuple(PredictionRecord.__dataclass_fields__)

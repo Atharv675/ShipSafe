@@ -97,13 +97,15 @@ def _lineage_row(request_id: str) -> tuple[Any, ...] | None:
 
 
 def test_both_real_models_are_served(http: httpx.Client) -> None:
-    models = {m["file_type"]: m for m in http.get("/v1/models").json()}
-    assert set(models) == {"Win64", "Win32"}
-    for ft in ("Win64", "Win32"):
-        cur = models[ft]["current"]
-        assert cur is not None, models[ft]["last_error"]
+    # Stage 6: one entry per (ring, file type); each ring's alias, production as fallback
+    models = {(m["ring"], m["file_type"]): m for m in http.get("/v1/models").json()}
+    rings = ("ring0", "ring1", "ring2")
+    assert set(models) == {(r, ft) for r in rings for ft in ("Win64", "Win32")}
+    for (ring, ft), m in models.items():
+        cur = m["current"]
+        assert cur is not None, m["last_error"]
         assert cur["model"] == f"sentinel-{ft.lower()}"
-        assert models[ft]["alias"] == "production"
+        assert m["aliases"] == [f"{ring}_model", "production"]
 
 
 def test_score_writes_full_lineage(http: httpx.Client, tenant: str) -> None:

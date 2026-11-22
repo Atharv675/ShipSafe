@@ -1,0 +1,46 @@
+# Stage 6: ring rollout and automatic rollback. Reasoning in docs/DECISIONS.md (Stage 6).
+# Rings come from configs/replay.yaml (ring = stable hash of tenant_id): ring0 5%, ring1 25%,
+# ring2 the rest. Serving computes the ring itself and uses that ring's registry alias.
+ring_aliases:
+  ring0: ring0_model
+  ring1: ring1_model
+  ring2: ring2_model
+fallback_alias: production        # a ring whose alias is missing serves production
+demo_tag: demo                    # only versions tagged demo=true may skip the gate (--demo)
+
+check_seconds: 10                 # controller tick: measure, decide, reconcile aliases
+# Advance a ring only after the candidate has served at least this many (non-canary) events
+# there. Win64 replay: ~10,000 events per week, so ring0 ~500, ring1 ~2,500, ring2 ~7,000.
+min_events:
+  ring0: 300
+  ring1: 1500
+  ring2: 3000
+
+canaries:                         # the controller scores the never-break files through the API
+  tenant_prefix: canary-          # as a canary tenant of each ring once that ring serves the
+                                  # candidate; the API counts them under canary_* metrics, so
+                                  # they never enter the real-traffic error/latency signals
+  required_per_ring: 500          # the whole never-break set must be scored before advancing
+  send_workers: 2                 # concurrent canary requests (a burst would slow real traffic)
+
+signals:
+  confidence: 0.95                # Wilson intervals for flag rate and error rate
+  # model flag rate (score > threshold) may rise at most this much relative to production on
+  # the same period; breach only when the candidate's lower bound clears production's upper
+  max_flag_rate_increase_relative: 0.10
+  never_break_hits_allowed: 0     # any canary flagged -> roll back at once
+  max_error_rate: 0.01            # 5xx share; breach when its lower Wilson bound is above this
+  max_p99_ratio: 2.0              # candidate p99 latency <= production p99 * ratio + slack
+  p99_slack_ms: 25
+  min_latency_samples: 200        # fewer latency samples -> cannot advance yet
+
+api_url: http://api:8000          # the controller reads the API's request/latency metrics
+api_timeout_seconds: 5
+
+# Stage 6 demonstration models (make demo-models), built from production's own artifacts:
+#   GOOD = an identical copy; BAD = the same model shipped with the default 0.5 cut-off
+#   (measured on Win64 week 56: false alarms 0.22% -> 1.26%, never-break hits 0 -> 1 of 500).
+demo:
+  file_type: Win64
+  source_alias: production
+  bad_threshold_raw: 0.5

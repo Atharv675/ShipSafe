@@ -1,6 +1,7 @@
 # Progress
 
-> **HANDOFF (2026-11-21)**
+> **HANDOFF (2026-11-22)**
+> - **Stage 6 DONE (2026-11-22):** API routes by ring (`ring0_model`/`ring1_model`/`ring2_model`, fallback `production`); controller `make rollout CANDIDATE=<v> [FILE_TYPE=] [DEMO=1]`, `make rollout-status`, `make kill-switch`, `make rollout-timeline`, `make demo-models`, `make demo-reset`; append-only `rollout_transitions`. On an existing database: add `SENTINEL_ROLLOUT_DB_PASSWORD` + `SENTINEL_ADMIN_API_KEY` to `.env`, `docker compose up -d postgres`, `make migrate`, `make rollout-init`, `make up`. Demo results in `docs/ROLLOUT_DEMO.md`. Registry left on v1 everywhere. Unreplayed weeks left: Win64 63-64, Win32 59-64. **Next: Stage 7 (main experiment)** after the owner's go-ahead; start a fresh session.
 > - **Win32 through Stages 4-5 (2026-11-21):** `sentinel-win32` v2 candidate registered, weeks 53-55 replayed (89,998 = 89,998), gate → **REJECT** (`docs/gate/Win32-v2-vs-v1-20261121T062053Z.md`). Use `FILE_TYPE=Win32` with `make replay`, `make replay-counts` and `make gate`. **Next: Stage 6 (OPTIONAL) or Stage 7** after the owner's go-ahead.
 > - **Stage 5 DONE (2026-11-20):** `make gate CANDIDATE=<v> [GATE_WEEKS=...]`, `make gate-verify`, policy `configs/gate_policy.yaml` (v1.0.0), decisions in append-only `gate_decisions` + `docs/gate/`. First real decision: Win64 v2 vs v1 on weeks 53-55 → **REJECT**. Run `make migrate` on an existing database (adds gate_decisions + `sentinel_gate`; needs `SENTINEL_GATE_DB_PASSWORD` in `.env` and `docker compose up -d postgres` first). **Next: Stage 6 (ring rollout, OPTIONAL)** after the owner's go-ahead.
 > - **Stage 4 DONE (2026-11-20):** Win64 test weeks 53-64 + never-break set imported to `$SENTINEL_DATA_DIR` (`make import-replay`); candidate `sentinel-win64` v2 (last 26 weeks, T = 52) under alias `candidate`; Redpanda + live/shadow consumers in compose; `make replay WEEKS=...`, `make replay-counts`, `make replay-check`. Weeks 53-55 are already replayed (rows in `predictions` / `shadow_predictions`). **Next: Stage 5 (release gate)** after the owner's go-ahead. Win32 has no candidate or local test weeks yet (same notebook with `FILE_TYPE = "Win32"`).
@@ -18,8 +19,8 @@
 | 2 | Baseline models and evaluation harness | DONE |
 | 3 | Serving service | DONE |
 | 4 | Replay stream and shadow scoring | DONE |
-| 5 | The release gate | DONE (awaiting owner go-ahead) |
-| 6 | Ring rollout and automatic rollback [OPTIONAL] | TODO |
+| 5 | The release gate | DONE |
+| 6 | Ring rollout and automatic rollback [OPTIONAL] | DONE (awaiting owner go-ahead) |
 | 7 | The main experiment | TODO |
 | 8 | Observability, alerts and load testing | TODO |
 | 9 | ML dashboard (Streamlit) | TODO |
@@ -238,3 +239,39 @@ Owner rules: no git/GitHub commands by the assistant; wait for go-ahead after ev
   - Plain reading: same pattern as Win64. Retraining on the last 26 weeks only, with a stricter threshold, misses about 1,000 more malware files in three weeks without a real cut in false alarms. Not safe to replace v1.
 - `make lint` clean; `make test` 189 passed (2 skipped, 97%); `make test-integration` 9 passed; `make gate-verify` 2 decisions, 0 problems. Production aliases unchanged; `candidate_approved` not set.
 - Note: both bundles record git `fd6009a…` (the last commit); the Stage 5 code was uncommitted when they ran.
+
+## Stage 6 — Ring rollout and automatic rollback [OPTIONAL — owner chose to build it, 2026-11-21]
+
+### Plan
+- `configs/rollout.yaml` → `RolloutConfig`: ring aliases (`ring0_model`, `ring1_model`, `ring2_model`, fallback `production`), check interval, minimum events per ring, canary settings, watch-signal limits.
+- Serving (`src/sentinel/serving/rings.py`): the API computes the tenant's ring itself (same stable hash as the producer, rings from `replay.yaml`); one `ModelManager` per ring alias with `production` as fallback; one shared model cache, so a version is loaded once. Lineage rows get a `ring` column. `POST /admin/rollback` (header `X-API-Key`, secret in `.env`) points every ring alias back at `production`, reloads at once and records ROLLED_BACK.
+- `src/sentinel/rollout/controller.py` (pure): states APPROVED → RING0 → RING1 → RING2 → COMPLETE, plus ROLLED_BACK; `desired_aliases(state)`; `decide(state, signals)` → advance / hold / rollback with a plain-English reason. `src/sentinel/rollout/run.py`: CLI loop (start, watch, reconcile aliases to the recorded state every tick, so a race with the kill switch heals itself).
+- Entry ticket: a gate PROMOTE for exactly this candidate vs current production plus the `candidate_approved` alias; OR `--demo` for versions tagged `demo=true` (recorded as such).
+- Watch signals per ring (on the events since the ring switched): model flag rate vs production on the same period (Wilson intervals, `evaluate.rate_increase_check`), never-break canary hits (the producer's `--canaries` sends the 500 never-break files to a canary tenant in every ring), 5xx error rate, p99 latency (from the API's metrics).
+- `docker/postgres/init/007_stage6.sql`: `predictions.ring`; append-only `rollout_transitions`; `008_rollout_role.sh`: `sentinel_rollout` role; `sentinel_api` may append transitions (kill switch).
+- `scripts/register_demo_models.py`: two demo versions of `sentinel-win64` built from v1's own artifacts: GOOD (identical copy) and BAD (cut-off 0.5, the classic mistake: 6× false alarms, 1 never-break hit measured on week 56).
+- Make: `rollout-init`, `demo-models`, `rollout CANDIDATE= [DEMO=1]`, `rollout-status`, `kill-switch`, `rollout-timeline`.
+- Tests: bad model rolled back in ring0 before ring1; good model reaches COMPLETE; kill switch restores all rings in < 60 s; router/fallback/shared cache; canaries; statistic; append-only transitions (integration).
+- Demo on the real stack (Win64, unreplayed weeks 56+), timelines in `docs/ROLLOUT_DEMO.md`.
+- (Changed while building) Canaries are sent by the controller through the API once the ring serves the candidate, not mixed into the replay stream (a canary published before the ring switched would be scored by production). `make demo-reset` added to undo a completed DEMO rollout.
+
+### Check results (2026-11-21/22)
+- `make lint` clean; mypy strict: no issues in 44 source files.
+- `make test`: 216 passed, 3 skipped (integration modules), coverage 97% (rollout/controller 97%, rollout/store 94%, serving/app 99%). Plan tests: bad model rolled back in ring0 before ring1 (`test_bad_model_is_rolled_back_in_ring0_before_ring1`); good model reaches COMPLETE and becomes production; kill switch restores every ring in < 60 s (`test_kill_switch_restores_every_ring_in_under_60_seconds`). Also: kill switch racing the controller wins; rollback still moves aliases when the DB is down; missing ring alias falls back to production; one model load shared by 3 rings; canary requests never enter the watched metrics; gate PROMOTE or demo tag required to start; demo versions are byte-identical models with only the threshold changed (real MLflow).
+- `make test-integration`: 17 passed (5 new in `test_rollout_store.py`, Stage 3 model test updated for rings): `sentinel_rollout` appends/reads but cannot change; even the owner cannot UPDATE/DELETE/TRUNCATE; malformed transitions refused by CHECKs; the API may record a kill-switch rollback; traffic query runs as the rollout role. All in rolled-back transactions.
+- `make migrate` (007 + 008) on the existing database; `make rollout-init`: ring aliases at production for Win64 + Win32; `make up`: API serves by ring, 322 MiB.
+- **Real-stack demo** (`docs/ROLLOUT_DEMO.md`, tables in `docs/rollout/`):
+  - BAD Win64 v4 (0.5 cut-off): rolled back in ring0 after 27.5 s by a never-break canary (1/500); 53 real ring0 files exposed; ring1/ring2 never saw it.
+  - Kill switch during RING1 (GOOD Win64 v3): every ring on production in **0.65 s**; recorded ROLLED_BACK by `kill_switch`.
+  - GOOD Win32 v3: APPROVED → RING0 → RING1 → RING2 → **COMPLETE** in 325 s; then `make demo-reset` put Win32 production back on v1.
+  - Two false alarms found on the identical GOOD model and fixed: canary burst inflating candidate p99 (canaries now in separate metrics, sent 2 at a time); production flag-rate baseline over a longer, differently mixed period (now the same period; not compared in the last ring).
+- Registry after the demo: both file types serve v1 in every ring; production v1; `gate-verify` 2 decisions, 0 problems.
+
+### Issues found and fixed (Stage 6)
+- MLflow 3.17 raises a generic INVALID_PARAMETER_VALUE for a missing alias → resolve from `get_registered_model().aliases` and raise LookupError (enables the production fallback).
+- Demo models' artifacts must live under the registry's artifact root, or the API container cannot read them.
+- Unit test of the weak model cache was wrong (the fake kept a strong reference); fixed the test, not the code.
+- Status polling in the shell dropped stderr (structlog writes there); read the table instead.
+
+### Stage 6 DONE (2026-11-22)
+- Done-when met: both simulations (bad model rolled back in ring0; good model reaches COMPLETE), plus the kill switch, shown with timelines in `docs/ROLLOUT_DEMO.md`.

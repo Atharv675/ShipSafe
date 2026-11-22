@@ -25,8 +25,8 @@ DOCS_RW = "--mount=type=bind,source=$(SRC)/docs,target=/work/docs"
 .PHONY: help lock sandbox setup hooks format lint test data download inspect report bundle \
 	clean-data cleaning-report train baseline-report train-smoke gate up down sample-request \
 	test-integration migrate import-replay register-candidate replay replay-counts replay-check \
-	gate-verify \
-	dashboard demo
+	gate-verify rollout-init demo-models rollout rollout-watch rollout-status kill-switch demo-reset \
+	rollout-timeline dashboard demo
 
 help:
 	@echo Targets: setup lint test test-integration data download inspect report clean-data cleaning-report bundle lock sandbox train gate up down sample-request dashboard demo
@@ -152,10 +152,11 @@ sample-request:
 test-integration: export SENTINEL_IT_ADMIN_DSN = postgresql://sentinel_admin:$(SENTINEL_PG_ADMIN_PASSWORD)@postgres:5432/sentinel
 test-integration: export SENTINEL_IT_API_DSN = postgresql://sentinel_api:$(SENTINEL_API_DB_PASSWORD)@postgres:5432/sentinel
 test-integration: export SENTINEL_IT_GATE_DSN = postgresql://sentinel_gate:$(SENTINEL_GATE_DB_PASSWORD)@postgres:5432/sentinel
+test-integration: export SENTINEL_IT_ROLLOUT_DSN = postgresql://sentinel_rollout:$(SENTINEL_ROLLOUT_DB_PASSWORD)@postgres:5432/sentinel
 test-integration:
 	$(SANDBOX_NET) --network=sentinel_default -e GIT_PYTHON_REFRESH=quiet \
 		-e SENTINEL_API_URL=http://api:8000 -e SENTINEL_IT_ADMIN_DSN -e SENTINEL_IT_API_DSN \
-		-e SENTINEL_IT_GATE_DSN \
+		-e SENTINEL_IT_GATE_DSN -e SENTINEL_IT_ROLLOUT_DSN \
 		$(DATA_RO) $(IMAGE) pytest -m integration --no-cov tests/integration
 
 dashboard:
@@ -173,6 +174,9 @@ migrate:
 	$(COMPOSE) exec -T postgres psql -v ON_ERROR_STOP=1 -U sentinel_admin -d sentinel \
 		-f /docker-entrypoint-initdb.d/005_stage5.sql
 	$(COMPOSE) exec -T postgres sh /docker-entrypoint-initdb.d/006_gate_role.sh
+	$(COMPOSE) exec -T postgres psql -v ON_ERROR_STOP=1 -U sentinel_admin -d sentinel \
+		-f /docker-entrypoint-initdb.d/007_stage6.sql
+	$(COMPOSE) exec -T postgres sh /docker-entrypoint-initdb.d/008_rollout_role.sh
 
 # Verify + install a Kaggle replay export (test weeks + never-break set).
 ZIP ?=
@@ -204,3 +208,60 @@ replay-counts:
 # The three Stage 4 checks end to end (2-week replay, kill shadow mid-run, replay twice).
 replay-check:
 	bash scripts/replay_check.sh
+
+# ---------------------------------------------------------------- Stage 6: ring rollout
+# The controller runs in the sandbox on the compose network as `sentinel_rollout`; it moves
+# registry aliases through the MLflow server and reads the API's metrics.
+ROLLOUT_RUN = $(SANDBOX_NET) --network=sentinel_default -e SENTINEL_ROLLOUT_DSN \
+	-e SENTINEL_MLFLOW_URI=http://mlflow:5000 -e MLFLOW_ENABLE_ARTIFACTS_PROGRESS_BAR=false \
+	-e GIT_PYTHON_REFRESH=quiet -e HOME=/tmp $(DATA_RO)
+ROLLOUT_DSN = postgresql://sentinel_rollout:$(SENTINEL_ROLLOUT_DB_PASSWORD)@postgres:5432/sentinel
+DEMO ?=
+REASON ?= manual kill switch
+ROLLOUT_ID ?=
+OUT ?=
+
+# Create any missing ring aliases (ring0_model, ring1_model, ring2_model) at production.
+rollout-init: export SENTINEL_ROLLOUT_DSN = $(ROLLOUT_DSN)
+rollout-init:
+	$(ROLLOUT_RUN) $(IMAGE) python -m sentinel.rollout.run init
+
+# Register the two Stage 6 demo versions (GOOD copy / BAD 0.5 cut-off) of production.
+DEMO_KINDS ?= good bad
+demo-models:
+	$(SANDBOX) $(DATA_RW) -e GIT_PYTHON_REFRESH=quiet $(IMAGE) python scripts/register_demo_models.py \
+		--file-type $(FILE_TYPE) --kinds $(DEMO_KINDS)
+
+# Start a rollout and watch it to COMPLETE or ROLLED_BACK, e.g.
+#   make rollout CANDIDATE=3 [FILE_TYPE=Win64] [DEMO=1]
+rollout: export SENTINEL_ROLLOUT_DSN = $(ROLLOUT_DSN)
+rollout:
+	@test -n "$(CANDIDATE)" || (echo "usage: make rollout CANDIDATE=<version> [DEMO=1]" && exit 1)
+	$(ROLLOUT_RUN) $(IMAGE) python -m sentinel.rollout.run start --file-type $(FILE_TYPE) \
+		--candidate $(CANDIDATE) $(if $(DEMO),--demo) --watch
+
+rollout-watch: export SENTINEL_ROLLOUT_DSN = $(ROLLOUT_DSN)
+rollout-watch:
+	$(ROLLOUT_RUN) $(IMAGE) python -m sentinel.rollout.run watch --file-type $(FILE_TYPE)
+
+rollout-status: export SENTINEL_ROLLOUT_DSN = $(ROLLOUT_DSN)
+rollout-status:
+	@$(ROLLOUT_RUN) $(IMAGE) python -m sentinel.rollout.run status --file-type $(FILE_TYPE)
+
+# After a completed DEMO rollout: production + ring aliases back to the demo's source version
+# (refuses unless production is a version tagged demo=true).
+demo-reset:
+	$(ROLLOUT_RUN) $(IMAGE) python -m sentinel.rollout.run demo-reset --file-type $(FILE_TYPE)
+
+# Kill switch through the API (POST /admin/rollback), timed until every ring serves production.
+kill-switch: export SENTINEL_ADMIN_API_KEY := $(SENTINEL_ADMIN_API_KEY)
+kill-switch:
+	@$(ROLLOUT_RUN) -e SENTINEL_ADMIN_API_KEY $(IMAGE) python -m sentinel.rollout.run kill \
+		--reason "$(REASON)"
+
+# Write a rollout's transitions as a Markdown table, e.g. OUT=docs/rollout/bad.md
+rollout-timeline: export SENTINEL_ROLLOUT_DSN = $(ROLLOUT_DSN)
+rollout-timeline:
+	@test -n "$(OUT)" || (echo "usage: make rollout-timeline OUT=docs/rollout/<name>.md" && exit 1)
+	$(ROLLOUT_RUN) $(DOCS_RW) $(IMAGE) python -m sentinel.rollout.run timeline \
+		--file-type $(FILE_TYPE) $(if $(ROLLOUT_ID),--rollout-id $(ROLLOUT_ID)) --out /work/$(OUT)

@@ -13,7 +13,7 @@ Design (see docs/DECISIONS.md, Stage 3):
 from __future__ import annotations
 
 import threading
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Any, Protocol
@@ -76,7 +76,7 @@ class LoadedModel:
 
 class ModelSource(Protocol):
     def resolve(self, name: str, alias: str) -> str:
-        """Version the alias points to now."""
+        """Version the alias points to now; LookupError if the alias does not exist."""
 
     def load(self, name: str, version: str) -> LoadedModel:
         """Load that exact version."""
@@ -95,7 +95,13 @@ class MlflowModelSource:
         self._threads = predict_threads
 
     def resolve(self, name: str, alias: str) -> str:
-        return str(self._client.get_model_version_by_alias(name, alias).version)
+        aliases = self._client.get_registered_model(name).aliases  # {alias: version}
+        if alias not in aliases:
+            raise LookupError(f"{name} has no alias {alias!r}")
+        return str(aliases[alias])
+
+    def set_alias(self, name: str, alias: str, version: str) -> None:
+        self._client.set_registered_model_alias(name, alias, version)
 
     def load(self, name: str, version: str) -> LoadedModel:
         """Copy the version's artifacts to private temp space, then load from there.
@@ -146,12 +152,16 @@ class ModelManager:
         self,
         source: ModelSource,
         models: Mapping[str, str],
-        alias: str,
+        alias: str | Sequence[str],
         metrics: MetricsRecorder | None = None,
     ) -> None:
-        """`models` maps file type -> registered model name."""
+        """`models` maps file type -> registered model name. `alias` may be a chain: the
+        first alias that exists wins (a ring alias, then `production` as the fallback)."""
         self._source = source
-        self._alias = alias
+        self._aliases = (alias,) if isinstance(alias, str) else tuple(alias)
+        if not self._aliases:
+            raise ValueError("need at least one alias")
+        self._alias = self._aliases[0]
         self._metrics = metrics
         self._slots = {ft: _Slot(ft, name) for ft, name in models.items()}
         self._write = threading.Lock()  # serialises swaps; readers never lock
@@ -206,6 +216,14 @@ class ModelManager:
         if self._metrics:
             self._metrics.inc("model_reloads", {"model_version": model.label, "how": how})
 
+    def _resolve(self, name: str) -> str:
+        for alias in self._aliases:
+            try:
+                return self._source.resolve(name, alias)
+            except LookupError:
+                continue
+        raise LookupError(f"{name}: none of the aliases {list(self._aliases)} exist")
+
     def refresh(self) -> dict[str, str]:
         """Poll the alias for every file type; load and swap where it moved.
 
@@ -215,7 +233,7 @@ class ModelManager:
         with self._refreshing:  # one refresh at a time; slow loads do NOT hold self._write
             for ft, slot in self._slots.items():
                 try:
-                    version = self._source.resolve(slot.name, self._alias)
+                    version = self._resolve(slot.name)
                     if slot.current is not None and slot.current.version == version:
                         outcomes[ft] = "unchanged"
                         continue
@@ -258,6 +276,7 @@ class ModelManager:
                 "file_type": s.file_type,
                 "model": s.name,
                 "alias": self._alias,
+                "aliases": list(self._aliases),
                 "current": s.current.describe() if s.current else None,
                 "previous_version": s.previous.version if s.previous else None,
                 "reloads": s.reloads,

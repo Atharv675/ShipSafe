@@ -269,6 +269,71 @@ def register_candidate(
     return result
 
 
+def register_derived_version(
+    tracking_uri: str,
+    name: str,
+    source_version: str,
+    work_dir: Path,
+    artifact_root: Path,
+    tags: dict[str, str],
+    threshold_raw: float | None = None,
+    experiment: str = "sentinel-rollout-demo",
+) -> str:
+    """Register a NEW version of `name` from an existing version's own booster, calibrator
+    and metadata, optionally with a different raw threshold (Stage 6 demo models). No alias
+    is set. Returns the new version."""
+    import tempfile
+
+    import mlflow.artifacts
+
+    mlflow.set_tracking_uri(tracking_uri)
+    with tempfile.TemporaryDirectory(prefix="sentinel-derive-") as tmp:
+        local = mlflow.artifacts.download_artifacts(
+            artifact_uri=f"models:/{name}/{source_version}", dst_path=tmp
+        )
+        src = mlflow.pyfunc.load_model(local).unwrap_python_model()
+    work_dir.mkdir(parents=True, exist_ok=True)
+    src.booster.save_model(str(work_dir / LGBM_FILE))
+    src.calibrator.save(work_dir / LGBM_CAL_FILE)
+    meta = dict(src.meta)
+    if threshold_raw is not None:
+        meta["threshold_raw"] = float(threshold_raw)
+    (work_dir / META_FILE).write_text(json.dumps(meta, indent=1) + "\n", encoding="utf-8")
+    exp = mlflow.get_experiment_by_name(experiment)
+    exp_id = (
+        exp.experiment_id
+        if exp
+        else mlflow.create_experiment(experiment, artifact_location=artifact_root.as_uri())
+    )
+    all_tags = {
+        **tags,
+        "source_version": str(source_version),
+        "file_type": str(meta["file_type"]),
+        "feature_schema_version": str(meta["feature_schema_version"]),
+        "data_fingerprint": str(meta.get("data_fingerprint")),
+        "threshold_raw": repr(float(meta["threshold_raw"])),
+    }
+    with mlflow.start_run(experiment_id=exp_id, run_name=f"{name}-from-v{source_version}"):
+        mlflow.set_tags(all_tags)
+        info = mlflow.pyfunc.log_model(
+            name="model",
+            python_model=SentinelModel(),
+            artifacts={
+                "lightgbm": str(work_dir / LGBM_FILE),
+                "calibration": str(work_dir / LGBM_CAL_FILE),
+                "meta": str(work_dir / META_FILE),
+            },
+            registered_model_name=name,
+            pip_requirements=[f"lightgbm=={lgb.__version__}", f"mlflow=={mlflow.__version__}"],
+        )
+    version = str(info.registered_model_version)
+    client = MlflowClient(tracking_uri=tracking_uri)
+    for k, v in all_tags.items():
+        client.set_model_version_tag(name, version, k, v)
+    log.info("derived_version_registered", model_name=name, version=version, **tags)
+    return version
+
+
 def load_production(tracking_uri: str, cfg: TrainConfig, file_type: str) -> Any:
     """Load the dataset's production model by alias (what serving does in Stage 3)."""
     mlflow.set_tracking_uri(tracking_uri)

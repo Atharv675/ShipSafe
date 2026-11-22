@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     mlflow_uri: str | None = None  # default: SQLite registry under data_dir/mlflow
     pg_dsn: str | None = None  # PostgreSQL DSN for serving (secret: .env / compose only)
+    admin_api_key: SecretStr | None = None  # Stage 6 kill switch; unset = endpoint disabled
 
     @property
     def mlflow_dir(self) -> Path:
@@ -340,6 +341,57 @@ class GatePolicy(_Frozen):
         return requested
 
 
+RingName = Literal["ring0", "ring1", "ring2"]
+RING_ORDER: tuple[RingName, ...] = ("ring0", "ring1", "ring2")
+
+
+class CanaryConfig(_Frozen):
+    tenant_prefix: str = Field(min_length=1)
+    required_per_ring: int = Field(ge=0)
+    send_workers: int = Field(ge=1)
+
+
+class RolloutSignalsConfig(_Frozen):
+    confidence: float = Field(gt=0, lt=1)
+    max_flag_rate_increase_relative: float = Field(ge=0)
+    never_break_hits_allowed: int = Field(ge=0)
+    max_error_rate: float = Field(gt=0, lt=1)
+    max_p99_ratio: float = Field(ge=1)
+    p99_slack_ms: float = Field(ge=0)
+    min_latency_samples: int = Field(ge=1)
+
+
+class RolloutDemoConfig(_Frozen):
+    file_type: str
+    source_alias: str = Field(min_length=1)
+    bad_threshold_raw: float = Field(gt=0, lt=1)
+
+
+class RolloutConfig(_Frozen):
+    ring_aliases: dict[RingName, str]
+    fallback_alias: str = Field(min_length=1)
+    demo_tag: str = Field(min_length=1)
+    check_seconds: float = Field(gt=0)
+    min_events: dict[RingName, int]
+    canaries: CanaryConfig
+    signals: RolloutSignalsConfig
+    api_url: str = Field(min_length=1)
+    api_timeout_seconds: float = Field(gt=0)
+    demo: RolloutDemoConfig
+
+    @model_validator(mode="after")
+    def _every_ring(self) -> RolloutConfig:
+        for name, d in (("ring_aliases", self.ring_aliases), ("min_events", self.min_events)):
+            if set(d) != set(RING_ORDER):
+                raise ValueError(f"{name} must list exactly {RING_ORDER}")
+        aliases = list(self.ring_aliases.values())
+        if len(set(aliases)) != len(aliases) or self.fallback_alias in aliases:
+            raise ValueError("ring aliases must be distinct and differ from the fallback alias")
+        if any(v < 1 for v in self.min_events.values()):
+            raise ValueError("min_events must be >= 1 for every ring")
+        return self
+
+
 def load_yaml(path: Path) -> dict[str, Any]:
     with path.open(encoding="utf-8") as fh:
         loaded = yaml.safe_load(fh)
@@ -370,6 +422,10 @@ def load_replay_config(path: Path | None = None) -> ReplayConfig:
 
 def load_gate_policy(path: Path | None = None) -> GatePolicy:
     return GatePolicy.model_validate(load_yaml(path or CONFIG_DIR / "gate_policy.yaml"))
+
+
+def load_rollout_config(path: Path | None = None) -> RolloutConfig:
+    return RolloutConfig.model_validate(load_yaml(path or CONFIG_DIR / "rollout.yaml"))
 
 
 def load_serving_config(path: Path | None = None) -> ServingConfig:
