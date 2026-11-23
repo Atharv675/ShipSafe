@@ -26,7 +26,7 @@ DOCS_RW = "--mount=type=bind,source=$(SRC)/docs,target=/work/docs"
 	clean-data cleaning-report train baseline-report train-smoke gate up down sample-request \
 	test-integration migrate import-replay register-candidate replay replay-counts replay-check \
 	gate-verify rollout-init demo-models rollout rollout-watch rollout-status kill-switch demo-reset \
-	rollout-timeline dashboard demo
+	rollout-timeline experiment-import experiment v1-zip dashboard demo
 
 help:
 	@echo Targets: setup lint test test-integration data download inspect report clean-data cleaning-report bundle lock sandbox train gate up down sample-request dashboard demo
@@ -177,6 +177,8 @@ migrate:
 	$(COMPOSE) exec -T postgres psql -v ON_ERROR_STOP=1 -U sentinel_admin -d sentinel \
 		-f /docker-entrypoint-initdb.d/007_stage6.sql
 	$(COMPOSE) exec -T postgres sh /docker-entrypoint-initdb.d/008_rollout_role.sh
+	$(COMPOSE) exec -T postgres psql -v ON_ERROR_STOP=1 -U sentinel_admin -d sentinel \
+		-f /docker-entrypoint-initdb.d/009_stage7.sql
 
 # Verify + install a Kaggle replay export (test weeks + never-break set).
 ZIP ?=
@@ -217,6 +219,7 @@ ROLLOUT_RUN = $(SANDBOX_NET) --network=sentinel_default -e SENTINEL_ROLLOUT_DSN 
 	-e GIT_PYTHON_REFRESH=quiet -e HOME=/tmp $(DATA_RO)
 ROLLOUT_DSN = postgresql://sentinel_rollout:$(SENTINEL_ROLLOUT_DB_PASSWORD)@postgres:5432/sentinel
 DEMO ?=
+NO_CANARIES ?=
 REASON ?= manual kill switch
 ROLLOUT_ID ?=
 OUT ?=
@@ -238,7 +241,7 @@ rollout: export SENTINEL_ROLLOUT_DSN = $(ROLLOUT_DSN)
 rollout:
 	@test -n "$(CANDIDATE)" || (echo "usage: make rollout CANDIDATE=<version> [DEMO=1]" && exit 1)
 	$(ROLLOUT_RUN) $(IMAGE) python -m sentinel.rollout.run start --file-type $(FILE_TYPE) \
-		--candidate $(CANDIDATE) $(if $(DEMO),--demo) --watch
+		--candidate $(CANDIDATE) $(if $(DEMO),--demo) $(if $(NO_CANARIES),--no-canaries) --watch
 
 rollout-watch: export SENTINEL_ROLLOUT_DSN = $(ROLLOUT_DSN)
 rollout-watch:
@@ -265,3 +268,22 @@ rollout-timeline:
 	@test -n "$(OUT)" || (echo "usage: make rollout-timeline OUT=docs/rollout/<name>.md" && exit 1)
 	$(ROLLOUT_RUN) $(DOCS_RW) $(IMAGE) python -m sentinel.rollout.run timeline \
 		--file-type $(FILE_TYPE) $(if $(ROLLOUT_ID),--rollout-id $(ROLLOUT_ID)) --out /work/$(OUT)
+
+# ---------------------------------------------------------------- Stage 7: main experiment
+# Kaggle runs notebooks/stage7_experiment.ipynb (candidates + score export); locally:
+#   make experiment-import ZIP=<path to sentinel_stage7_<type>_<part>.zip>   (once per zip)
+#   make experiment [RESAMPLES=50]   -> data/results/experiment.parquet, docs/RESULTS.md, MLflow
+RESAMPLES ?=
+experiment-import:
+	@test -n "$(ZIP)" || (echo "usage: make experiment-import ZIP=<path to sentinel_stage7_*.zip>" && exit 1)
+	$(SANDBOX) $(DATA_RW) "--mount=type=bind,source=$(ZIP),target=/in/$(notdir $(ZIP)),readonly" \
+		$(IMAGE) python scripts/run_experiment.py import --zip /in/$(notdir $(ZIP))
+
+experiment:
+	$(SANDBOX) $(DATA_RW) $(DOCS_RW) -e GIT_PYTHON_REFRESH=quiet -e HOME=/tmp $(IMAGE) \
+		python scripts/run_experiment.py run $(if $(RESAMPLES),--resamples $(RESAMPLES))
+
+# The v1 bundle the Kaggle experiment starts from: dist/sentinel_v1_<type>.zip (model files only).
+v1-zip:
+	$(SANDBOX) $(DATA_RO) "--mount=type=bind,source=$(SRC)/dist,target=/work/dist" $(IMAGE) \
+		python scripts/pack_v1.py --file-type $(FILE_TYPE)

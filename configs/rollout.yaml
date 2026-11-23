@@ -33,6 +33,13 @@ signals:
   max_p99_ratio: 2.0              # candidate p99 latency <= production p99 * ratio + slack
   p99_slack_ms: 25
   min_latency_samples: 200        # fewer latency samples -> cannot advance yet
+  # Stage 7 paired scoring: in a ring on the candidate the API also scores each file with
+  # production. In each direction (candidate flags / production clears, and the reverse) the
+  # live disagreement rate's lower Wilson bound may exceed the approved rate (upper bound of
+  # what the gate measured; 0 for a demo copy of production) by at most this, absolute.
+  # Win64 week 56: the 0.5 cut-off model newly flags ~4% of files vs production.
+  max_disagreement_increase: 0.01
+  min_reference_coverage: 0.95    # share of candidate files that must carry a production score
 
 api_url: http://api:8000          # the controller reads the API's request/latency metrics
 api_timeout_seconds: 5

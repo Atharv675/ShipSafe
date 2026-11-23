@@ -54,6 +54,7 @@ SELECT_PROMOTE = (
     "SELECT decision_id FROM gate_decisions WHERE file_type = %s AND decision = 'PROMOTE' "
     "AND candidate_version = %s AND production_version = %s ORDER BY created_at DESC LIMIT 1"
 )
+SELECT_BUNDLE = "SELECT bundle_json FROM gate_decisions WHERE decision_id = %s"
 
 
 def _row(r: tuple[Any, ...]) -> Transition:
@@ -164,6 +165,14 @@ class PostgresTransitionStore:  # pragma: no cover - SQL exercised by integratio
             r = conn.execute(SELECT_PROMOTE, (file_type, candidate, production)).fetchone()
         return str(r[0]) if r else None
 
+    def gate_bundle(self, decision_id: str) -> dict[str, Any]:
+        with self._connect() as conn:
+            r = conn.execute(SELECT_BUNDLE, (decision_id,)).fetchone()
+        if r is None:
+            raise LookupError(decision_id)
+        bundle: dict[str, Any] = json.loads(r[0])
+        return bundle
+
 
 class MlflowRegistry:  # pragma: no cover - thin MLflow wrapper (integration / demo)
     def __init__(self, tracking_uri: str) -> None:
@@ -202,7 +211,16 @@ SELECT
   (SELECT count(*) FROM predictions WHERE model_version = %(cand)s AND ring = %(ring)s
      AND tenant_id LIKE %(canary)s),
   (SELECT count(*) FROM predictions WHERE model_version = %(cand)s
-     AND tenant_id LIKE %(canary)s AND score > threshold)
+     AND tenant_id LIKE %(canary)s AND score > threshold),
+  -- Stage 7 paired scoring: the same files, also scored by production at the same moment
+  (SELECT count(*) FROM predictions WHERE model_version = %(cand)s AND ring = %(ring)s
+     AND ts >= %(since)s AND tenant_id NOT LIKE %(canary)s AND reference_version = %(prod)s),
+  (SELECT count(*) FROM predictions WHERE model_version = %(cand)s AND ring = %(ring)s
+     AND ts >= %(since)s AND tenant_id NOT LIKE %(canary)s AND reference_version = %(prod)s
+     AND score > threshold AND reference_verdict = 'benign'),
+  (SELECT count(*) FROM predictions WHERE model_version = %(cand)s AND ring = %(ring)s
+     AND ts >= %(since)s AND tenant_id NOT LIKE %(canary)s AND reference_version = %(prod)s
+     AND score <= threshold AND reference_verdict = 'malicious')
 """
 
 

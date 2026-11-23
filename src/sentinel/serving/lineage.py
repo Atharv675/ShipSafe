@@ -37,6 +37,11 @@ class PredictionRecord:
     ts: datetime
     event_id: str | None = None  # set for stream events; unique with model_version
     ring: str | None = None  # Stage 6: the tenant's rollout ring that chose the model
+    # Stage 7 paired scoring: production's view of the same file when the ring serves another
+    # model (verdict = production's MODEL verdict, before overrides); None otherwise
+    reference_version: str | None = None
+    reference_score: float | None = None
+    reference_verdict: str | None = None
 
 
 COLUMNS = tuple(PredictionRecord.__dataclass_fields__)

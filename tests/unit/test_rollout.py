@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import time
 from collections.abc import Mapping
 from dataclasses import replace
@@ -14,12 +15,24 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
-from sentinel.config import RingsConfig, RolloutConfig, load_rollout_config, load_serving_config
-from sentinel.models.evaluate import rate_increase_check, wilson_interval
+from sentinel.config import (
+    REPO_ROOT,
+    RingsConfig,
+    RolloutConfig,
+    load_rollout_config,
+    load_serving_config,
+)
+from sentinel.models.evaluate import (
+    disagreement_check,
+    expected_disagreement_upper,
+    rate_increase_check,
+    wilson_interval,
+)
 from sentinel.monitoring.metrics import MetricsRecorder
 from sentinel.replay.events import ring_for
 from sentinel.rollout.controller import (
     Controller,
+    ExpectedDisagreement,
     RingTraffic,
     RolloutError,
     ServiceHealth,
@@ -48,6 +61,10 @@ from sentinel.serving.rings import RingRouter, SharedModelSource
 from tests.serving_support import DIM, NAMES, SCHEMA, loaded, serving_cfg
 
 CFG = load_rollout_config()
+# the real Stage 5 evidence bundle (Win64 v2 vs v1, weeks 53-55) for expected disagreements
+REAL_BUNDLE: dict[str, Any] = json.loads(
+    (REPO_ROOT / "docs" / "gate" / "Win64-v2-vs-v1-20261120T171839Z.json").read_text("utf-8")
+)
 RINGS = RingsConfig(ring0_percent=5, ring1_percent=25)
 NAME = NAMES["Win64"]
 T0 = datetime(2026, 11, 21, 10, 0, tzinfo=UTC)
@@ -96,6 +113,7 @@ class Store:
     def __init__(self) -> None:
         self.rows: list[Transition] = []
         self.promotes: dict[tuple[str, str, str], str] = {}
+        self.bundles: dict[str, dict[str, Any]] = {}
         self.clock = T0
 
     def latest(self, file_type: str) -> Transition | None:
@@ -122,6 +140,9 @@ class Store:
 
     def promote_decision(self, file_type: str, candidate: str, production: str) -> str | None:
         return self.promotes.get((file_type, candidate, production))
+
+    def gate_bundle(self, decision_id: str) -> dict[str, Any]:
+        return self.bundles[decision_id]
 
 
 class Meter:
@@ -156,6 +177,7 @@ def healthy(ring: str, events: int = 10_000, flagged_share: float = 0.45) -> Rin
         production_flagged=int(50_000 * 0.45),
         canaries_in_ring=CFG.canaries.required_per_ring,
         canary_hits=0,
+        paired_events=events,  # production scored every file alongside; they agree
     )
 
 
@@ -294,6 +316,7 @@ def test_evaluate_advance_hold_rollback() -> None:
     assert {c["name"] for c in ok.as_dict()["checks"]} == {
         "never_break",
         "flag_rate",
+        "disagreement",
         "errors",
         "latency",
         "volume",
@@ -358,8 +381,16 @@ def test_start_needs_gate_promote_or_demo_tag() -> None:
     with pytest.raises(RolloutError, match="no gate PROMOTE"):
         ctl.start("Win64", NAME, "8", T0)
     store.promotes[("Win64", f"{NAME}/8", f"{NAME}/1")] = "Win64-v8-vs-v1-x"
+    store.bundles["Win64-v8-vs-v1-x"] = REAL_BUNDLE
     t = ctl.start("Win64", NAME, "8", T0)
     assert t.reason == "gate decision Win64-v8-vs-v1-x: PROMOTE"
+    # the gate's measured disagreement is what the rollout will hold the candidate to
+    assert t.signals["expected_disagreement"] == {
+        "new_flags": 85 + 2,
+        "cleared": 525 + 12,
+        "n": 29_996,
+        "source": "gate decision Win64-v8-vs-v1-x",
+    }
     with pytest.raises(RolloutError, match="still APPROVED"):
         ctl.start("Win64", NAME, "7", T0, demo=True)
 
@@ -452,7 +483,9 @@ def test_missing_ring_aliases_fall_back_to_production_and_share_one_load() -> No
     assert out["ring0"] == {"Win64": "loaded:1", "Win32": "loaded:1"}
     assert router.ready
     assert reg.loads == 2  # one per file type, not one per ring
-    assert router.serving_versions() == {r: {"Win64": "1", "Win32": "1"} for r in out}
+    rings = ("ring0", "ring1", "ring2")
+    assert router.serving_versions() == {r: {"Win64": "1", "Win32": "1"} for r in rings}
+    assert out["reference"] == {"Win64": "loaded:1", "Win32": "loaded:1"}  # shared, no reload
     assert all(s["aliases"][-1] == "production" for s in router.status())
 
 
@@ -670,3 +703,114 @@ def test_demo_versions_copy_production_and_change_only_the_threshold(tmp_path: P
     assert src.resolve(NAME, "production") == v1  # production untouched, no alias on demos
     with pytest.raises(LookupError):
         src.resolve(NAME, "ring0_model")
+
+
+# ------------------------------------------------------------------ Stage 7: paired scoring
+
+
+def test_disagreement_check_and_expected_upper() -> None:
+    # a copy of production must agree with it: 0 expected, no uncertainty
+    assert expected_disagreement_upper(0, 0) == 0.0
+    assert expected_disagreement_upper(87, 29_996) == wilson_interval(87, 29_996)[1]
+    ok = disagreement_check(2, 300, 0.0, 0.01)  # 2 of 300 could be noise
+    assert not ok.breach and ok.as_dict()["rate"] == pytest.approx(2 / 300)
+    bad = disagreement_check(12, 300, 0.0, 0.01)  # the 0.5 cut-off model: ~4% new flags
+    assert bad.breach and bad.ci == wilson_interval(12, 300) and bad.limit == 0.01
+    nothing = disagreement_check(0, 0, 0.0, 0.01)
+    assert not nothing.breach and nothing.as_dict()["rate"] is None
+    for args in ((1, 2, 0.0, -0.1), (1, 2, 1.5, 0.01)):
+        with pytest.raises(ValueError):
+            disagreement_check(*args)
+
+
+def test_paired_scoring_catches_the_bad_cut_off_that_the_flag_rate_hides() -> None:
+    """Win64 week 56: the 0.5 cut-off newly flags ~4% of files that production clears. The
+    flag rate can't see it in ring0 (test above); the paired comparison does, with no
+    canary hit at all."""
+    t = replace(healthy("ring0", events=300, flagged_share=0.495), new_flags=12)
+    v = evaluate(WatchSignals(t, GOOD_HEALTH, ExpectedDisagreement.must_agree("demo")), CFG)
+    assert v.action == "rollback" and v.reason.count("[") == 1 and "[disagreement]" in v.reason
+    assert "flags that production clears: 4.00% of 300" in v.reason
+
+
+def test_paired_scoring_covers_the_last_ring() -> None:
+    t = replace(healthy("ring2", events=5_000), cleared=400)  # misses what production catches
+    v = evaluate(WatchSignals(t, GOOD_HEALTH), CFG)
+    assert v.action == "rollback" and "[disagreement]" in v.reason
+    assert "clears that production flags" in v.reason
+
+
+def test_disagreement_within_what_the_gate_approved_passes() -> None:
+    from sentinel.rollout.controller import expected_from_gate_bundle
+
+    exp = expected_from_gate_bundle(REAL_BUNDLE, "d1")
+    assert (exp.new_flags, exp.cleared, exp.n) == (87, 537, 29_996)
+    # the same rates as the gate measured (0.29% new flags, 1.79% cleared) -> pass
+    t = replace(healthy("ring1", events=3_000), new_flags=9, cleared=54)
+    assert evaluate(WatchSignals(t, GOOD_HEALTH, exp), CFG).action == "advance"
+    # far more cleared (misses) than approved -> rollback, though the gate approved some
+    worse = replace(t, cleared=150)
+    v = evaluate(WatchSignals(worse, GOOD_HEALTH, exp), CFG)
+    assert v.action == "rollback" and "gate decision d1" in v.reason
+
+
+def test_missing_production_scores_hold_the_ring() -> None:
+    t = replace(healthy("ring0", events=1_000), paired_events=500)
+    v = evaluate(WatchSignals(t, GOOD_HEALTH), CFG)
+    assert v.action == "hold" and "also scored by production" in v.reason
+
+
+def test_demo_rollout_records_must_agree_and_controller_uses_it() -> None:
+    bad = replace(healthy("ring0", events=300), new_flags=12)
+    ctl, *_ = setup({"ring0": bad})
+    first = ctl.start("Win64", NAME, "7", T0, demo=True, note="canaries OFF")
+    assert first.reason.endswith("; canaries OFF")
+    assert first.signals["expected_disagreement"]["n"] == 0
+    ctl.tick("Win64")
+    t, verdict = ctl.tick("Win64")
+    assert t.to_state is State.ROLLED_BACK and verdict is not None
+    assert "[disagreement]" in verdict.reason and "demo copy of" in verdict.reason
+    assert t.signals["signals"]["expected_disagreement"]["n"] == 0
+
+
+def test_api_scores_candidate_rings_with_production_too() -> None:
+    reg = Registry()
+    _two_types(reg, "production", "ring0_model", "ring1_model", "ring2_model")
+    reg.add(loaded("Win64", "7", seed=3))
+    reg.set_alias(NAME, "ring0_model", "7")
+    c, router, sink, _ = _api(reg)
+    loads = reg.loads
+    with c:
+        r0 = c.post("/v1/score", json=_body(canary_tenant("ring0", RINGS, "t-")))
+        r2 = c.post("/v1/score", json=_body(canary_tenant("ring2", RINGS, "t-")))
+    assert r0.status_code == r2.status_code == 200
+    on_candidate, on_production = sink.records
+    assert on_candidate.model_version == f"{NAME}/7"
+    assert on_candidate.reference_version == f"{NAME}/1"
+    prod = reg.models[(NAME, "1")]
+    x = np.asarray([[0.1] * DIM], dtype=np.float32)
+    assert on_candidate.reference_score == pytest.approx(float(prod.score(x)[0]))
+    want = "malicious" if on_candidate.reference_score > prod.threshold else "benign"
+    assert on_candidate.reference_verdict == want
+    # a ring already on production has nothing to compare with
+    assert on_production.reference_version is None and on_production.reference_score is None
+    assert reg.loads == loads  # production was already loaded: the reference shares it
+    assert router.refresh()["reference"] == {"Win64": "unchanged", "Win32": "unchanged"}
+
+
+def test_a_failing_reference_score_never_fails_the_request() -> None:
+    class Broken:  # passes the all-zero warm-up, fails on real traffic
+        def predict(self, x: Any, **_: Any) -> Any:
+            if np.any(x):
+                raise RuntimeError("boom")
+            return np.zeros(len(x))
+
+    reg = Registry()
+    reg.add(loaded("Win64", "1", model=Broken()), "production", "ring1_model", "ring2_model")
+    reg.add(loaded("Win32", "1", seed=2), "production", "ring0_model", "ring1_model")
+    reg.add(loaded("Win64", "7", seed=3), "ring0_model")
+    c, _, sink, _ = _api(reg)
+    with c:
+        r = c.post("/v1/score", json=_body(canary_tenant("ring0", RINGS, "t-")))
+    assert r.status_code == 200 and r.json()["model_version"] == f"{NAME}/7"
+    assert sink.records[-1].reference_version is None  # missing coverage, not a disagreement

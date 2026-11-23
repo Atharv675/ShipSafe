@@ -179,3 +179,40 @@ Stack
 ### Kill switch
 - **POST /admin/rollback** with header `X-API-Key` (secret in `.env`, compared in constant time; unset = endpoint disabled, 503). It records ROLLED_BACK for any rollout in progress first (so the controller cannot move the rings forward again), points every ring alias at production (even if recording failed — safety first), and reloads at once instead of waiting for the 30 s poll. The API's DB login may only INSERT/SELECT `rollout_transitions`.
 - `make demo-reset` undoes a completed DEMO rollout (refuses unless production is a version tagged demo=true), so the demo leaves the registry as it found it.
+
+## Stage 7
+
+### Paired scoring in the rollout (owner request, 2026-11-22)
+- **Production scores the same files in candidate rings.** In a ring serving a model other than `production`, the API also scores each file with production (a 4th `ModelManager` on `production` only, sharing the model cache, so nothing extra is loaded). It stores `reference_version`, `reference_score` and `reference_verdict` (the model verdict, before overrides) in `predictions` (migration 009). Why: comparing candidate files in one ring with production files in other rings drowns small changes in file-mix noise (Stage 6 Finding 2). On the same file at the same moment, mix and drift cancel out. Rejected: a lower flag-rate tolerance, which would bring back the false alarms. Rejected: shadow-scoring the candidate in a separate consumer, which doesn't follow ring routing and adds a process.
+- **A failed reference score never fails the request.** It is logged and stored as missing, which the controller sees as low coverage ("waiting", needs 95%), never as a disagreement.
+- **Signal `disagreement`**, in two directions: new flags (candidate flags, production clears) and cleared (the reverse). It breaches when the live rate's lower Wilson bound exceeds the approved rate's upper Wilson bound + 1 point (absolute; `max_disagreement_increase`).
+  - The approved rate comes from the gate decision that opened the rollout (its per-class disagreement tables at shipped thresholds) and is recorded in the APPROVED row.
+  - For a demo copy of production it is 0, with no uncertainty.
+  - Why relative to approval: labels arrive days later, so a disagreement can't be judged right or wrong live. Only "behaves as approved" can be checked.
+  - Why an absolute margin: the expected rate can be 0, where a relative margin is meaningless.
+  - Statistic: `evaluate.disagreement_check` and `expected_disagreement_upper`.
+- **Covers ring2.** Production still holds the `production` alias until COMPLETE, so it scores alongside the last ring as well.
+- **`--no-canaries` is demo only.** It exists to show the new signal on its own. A rollout without canaries can roll back but never advance (never-break stays waiting).
+- Cost: one extra model call per request, in candidate rings only, counted in the candidate's latency (p99 126 vs 103 ms in the demo, under replay load). Stage 8 measures it.
+
+### The main experiment (configs/experiment.yaml)
+All of these were fixed before any experiment result existed. Nothing is tuned on test weeks.
+- **Win64 only.** 60,000 benign test files, enough for 0.1% FPR over 4-week windows (about 20 benign files at the limit). Win32 would triple the Kaggle time (~45 h of retraining). Rejected for now; the same code runs it with `file_type: Win32`.
+- **18 real retrains, then cheap repeats.** One candidate per (T, retraining policy), T = 52, 54, ..., 62, trained on Kaggle with the Stage 4 code unchanged (same LightGBM settings as v1). "20+ seeds" is met with **50 bootstrap resamples of the weekly streams**: files drawn with replacement within each week, one draw shared by all models, so comparisons stay paired. Retraining per seed would need 18 × 50 retrains. Rejected. Consequence: the intervals cover sampling noise in the stream, not training randomness.
+- **Scores leave Kaggle, features don't.** The export holds each model's raw score and calibrated probability for every file of weeks 45-64, never-break scores, labels, weeks, label times and file hashes. The local simulation needs nothing else and runs in seconds per resample. Rejected: running the simulation on Kaggle, which would mean re-running hours of training to change one report line.
+- **Each policy runs its own production chain** per retraining policy, starting from v1 at week 53. A candidate is judged against the model it would replace in that chain.
+- **When decisions take effect.**
+  - P1 and P2 decide at T and serve from T+1.
+  - P3 shadows weeks T+1..T+2, then waits the gate's own `label_wait_days` (28) for those labels, so it decides at T+6 and serves from T+7.
+  - The gate's delay is a real cost and is kept, not hidden. Consequence: P3 decides only 3 of the 6 candidates per chain before the data ends (T = 52, 54, 56).
+- **P2** compares AUC on the candidate's own calibration weeks (the newest 4 weeks <= T, labels known by T). Those are the only labelled weeks the candidate did not fit on. Production may have calibrated on some of them; AUC on raw scores is not changed by a monotone calibrator.
+- **P3 uses the gate unchanged.** `run_checks` + `decide` with policy 1.0.0, offline. Every event has both scores, so coverage is 100%.
+- **Harmful** = over the 4 weeks after going live (capped at week 64), recall at 0.1% FPR is below the replaced model's (margin 0), or the model flags any never-break file at its shipped threshold.
+  - Recall at fixed FPR sets each model's threshold on the judged weeks themselves. This is a measurement of ranking quality after the decision, never an input to one (the gate's check (a) works the same way).
+  - Margin 0 is the plan's definition ("worse"). It counts small losses as harmful, which is strict on every policy alike.
+  - **Good update blocked** = a candidate not promoted that would have been better (higher recall, no never-break hit) against the same production.
+- **Drift alerts** are measured at T on what arrived, with no labels.
+  - Features: PSI of v1's top-20 features (by gain), decile bins fixed on v1's fit weeks, on the 2 weeks ending at T vs the 4 weeks before. An alert needs 3 or more features above 0.25.
+  - Scores: production's raw scores on the same windows, bins from the baseline window. An alert needs PSI above 0.10.
+  - Thresholds are textbook rules of thumb, not fitted. Precision is judged on P1's candidates, where each candidate appears once against its predecessor.
+- **Leakage guard.** `check_no_test_week_leakage` refuses to run if v1 touched a week >= 53, or if a candidate's fit, threshold or calibration weeks pass its T. The gate and the harm judgement assert that they never evaluate a model on weeks it learned from.

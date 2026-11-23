@@ -26,6 +26,7 @@ from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
 import numpy as np
+import numpy.typing as npt
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
@@ -34,7 +35,7 @@ from sentinel.config import RingsConfig, ServingConfig
 from sentinel.logging import get_logger
 from sentinel.monitoring.metrics import MetricsRecorder
 from sentinel.serving.lineage import PredictionRecord, PredictionSink
-from sentinel.serving.models import ModelManager
+from sentinel.serving.models import LoadedModel, ModelManager
 from sentinel.serving.overrides import OverrideStore, apply_override
 from sentinel.serving.rings import RingRouter
 
@@ -86,6 +87,32 @@ def _every(seconds: float, fn: Callable[[], object], stop: threading.Event, name
             stop.wait(seconds)
 
     threading.Thread(target=loop, name=name, daemon=True).start()
+
+
+def _reference_score(
+    router: RingRouter,
+    model: LoadedModel,
+    schema: str,
+    x: npt.NDArray[np.float32],
+    request_id: str,
+) -> tuple[str | None, float | None, str | None]:
+    """Stage 7 paired scoring: production's score for the same file when this ring serves
+    another model. Never fails the request: a failed reference score is logged and skipped
+    (the rollout sees it as missing coverage, not as a disagreement)."""
+    ref = router.reference_for(model, schema)
+    if ref is None:
+        return None, None, None
+    try:
+        s = float(ref.score(x.reshape(1, -1))[0])
+    except Exception as exc:
+        log.error(
+            "reference_scoring_failed",
+            request_id=request_id,
+            model_version=ref.label,
+            error=type(exc).__name__,
+        )
+        return None, None, None
+    return ref.label, s, MALICIOUS if s > ref.threshold else BENIGN
 
 
 def create_app(
@@ -177,6 +204,9 @@ def create_app(
                 500, label, {"error": "scoring_failed", "request_id": request_id}, kind
             ) from exc
         model_malicious = raw > model.threshold
+        ref_version, ref_score, ref_verdict = _reference_score(
+            router, model, req.feature_schema_version, x, request_id
+        )
         final, applied = apply_override(
             model_malicious, overrides.lookup(req.tenant_id, req.file_id)
         )
@@ -206,6 +236,9 @@ def create_app(
                 ts=datetime.now(UTC),
                 event_id=req.event_id,
                 ring=ring,
+                reference_version=ref_version,
+                reference_score=ref_score,
+                reference_verdict=ref_verdict,
             )
         )
         metrics.inc(f"{kind}requests", {"model_version": label, "status": "200"})

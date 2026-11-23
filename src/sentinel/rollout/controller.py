@@ -23,7 +23,12 @@ from typing import Any, Literal, Protocol
 
 from sentinel.config import RING_ORDER, RingsConfig, RolloutConfig
 from sentinel.logging import get_logger
-from sentinel.models.evaluate import rate_increase_check, wilson_interval
+from sentinel.models.evaluate import (
+    disagreement_check,
+    expected_disagreement_upper,
+    rate_increase_check,
+    wilson_interval,
+)
 from sentinel.replay.events import ring_for
 
 log = get_logger(__name__)
@@ -93,6 +98,49 @@ class RingTraffic:
     production_flagged: int
     canaries_in_ring: int  # never-break canaries the candidate scored in this ring
     canary_hits: int  # canaries the candidate flagged, in ANY ring
+    # Stage 7 paired scoring: candidate-scored events in this ring that production ALSO
+    # scored (same file, same moment), and the two directions of disagreement
+    paired_events: int = 0
+    new_flags: int = 0  # candidate flags, production clears
+    cleared: int = 0  # production flags, candidate clears
+
+
+@dataclass(frozen=True)
+class ExpectedDisagreement:
+    """How often the candidate was APPROVED to disagree with production, in each direction:
+    measured by the release gate on labelled shadow traffic (k of n files), or n = 0 for a
+    copy of production that must agree with it."""
+
+    new_flags: int
+    cleared: int
+    n: int
+    source: str
+
+    @classmethod
+    def must_agree(cls, source: str) -> ExpectedDisagreement:
+        return cls(0, 0, 0, source)
+
+    def as_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, d: Mapping[str, Any]) -> ExpectedDisagreement:
+        return cls(int(d["new_flags"]), int(d["cleared"]), int(d["n"]), str(d["source"]))
+
+
+def expected_from_gate_bundle(bundle: Mapping[str, Any], decision_id: str) -> ExpectedDisagreement:
+    """Disagreement rates the gate measured (check `disagreement`, shipped thresholds).
+    New flags = malware only the candidate caught + benign files only it flagged; cleared =
+    the reverse."""
+    chk = next(c for c in bundle["checks"] if c["name"] == "disagreement")["numbers"]
+    mal, ben = chk["malicious"], chk["benign"]
+    n = sum(int(t[k]) for t in (mal, ben) for k in ("both_right", "both_wrong", "discordant"))
+    return ExpectedDisagreement(
+        new_flags=int(mal["only_candidate_right"]) + int(ben["only_production_right"]),
+        cleared=int(mal["only_production_right"]) + int(ben["only_candidate_right"]),
+        n=n,
+        source=f"gate decision {decision_id}",
+    )
 
 
 @dataclass(frozen=True)
@@ -110,11 +158,15 @@ class ServiceHealth:
 class WatchSignals:
     traffic: RingTraffic
     health: ServiceHealth | None  # None: the API's metrics could not be read
+    expected: ExpectedDisagreement = field(
+        default_factory=lambda: ExpectedDisagreement.must_agree("default: must agree")
+    )
 
     def as_dict(self) -> dict[str, Any]:
         return {
             "traffic": asdict(self.traffic),
             "health": asdict(self.health) if self.health else None,
+            "expected_disagreement": self.expected.as_dict(),
         }
 
 
@@ -219,6 +271,56 @@ def check_flag_rate(t: RingTraffic, cfg: RolloutConfig) -> SignalCheck:
     return SignalCheck("flag_rate", "pass", text, nums)
 
 
+def check_disagreement(
+    t: RingTraffic, expected: ExpectedDisagreement, cfg: RolloutConfig
+) -> SignalCheck:
+    """Stage 7 paired scoring: on the SAME files, does the candidate disagree with production
+    clearly more often than approved, in either direction? File mix and drift cancel out, and
+    production keeps scoring alongside in every ring, the last one included."""
+    s = cfg.signals
+    nums: dict[str, Any] = {"paired": t.paired_events, "events": t.candidate_events}
+    parts: list[str] = []
+    breached: list[str] = []
+    for name, k, k_exp, what in (
+        ("new_flags", t.new_flags, expected.new_flags, "flags that production clears"),
+        ("cleared", t.cleared, expected.cleared, "clears that production flags"),
+    ):
+        upper = expected_disagreement_upper(k_exp, expected.n, s.confidence)
+        chk = disagreement_check(
+            k, t.paired_events, upper, s.max_disagreement_increase, s.confidence
+        )
+        nums[name] = chk.as_dict()
+        text = (
+            f"{what}: {_pct(k, t.paired_events)} of {t.paired_events:,} (CI "
+            f"{100 * chk.ci[0]:.2f}-{100 * chk.ci[1]:.2f}%, limit {100 * chk.limit:.2f}%)"
+        )
+        parts.append(text)
+        if chk.breach:
+            breached.append(text)
+    nums["expected"] = expected.as_dict()
+    ref = f"expected from {expected.source}"
+    if breached:
+        return SignalCheck(
+            "disagreement",
+            "fail",
+            "candidate disagrees with production on the same files far more than approved: "
+            + "; ".join(breached)
+            + f" ({ref})",
+            nums,
+        )
+    coverage = t.paired_events / t.candidate_events if t.candidate_events else 0.0
+    nums["coverage"] = coverage
+    if coverage < s.min_reference_coverage:
+        return SignalCheck(
+            "disagreement",
+            "waiting",
+            f"only {t.paired_events:,} of {t.candidate_events:,} candidate files also scored "
+            f"by production (need {100 * s.min_reference_coverage:.0f}%)",
+            nums,
+        )
+    return SignalCheck("disagreement", "pass", "; ".join(parts) + f" ({ref})", nums)
+
+
 def check_errors(h: ServiceHealth | None, cfg: RolloutConfig) -> SignalCheck:
     if h is None:
         return SignalCheck("errors", "waiting", "API metrics unavailable")
@@ -275,6 +377,7 @@ def evaluate(signals: WatchSignals, cfg: RolloutConfig) -> Verdict:
     checks = (
         check_never_break(t, cfg),
         check_flag_rate(t, cfg),
+        check_disagreement(t, signals.expected, cfg),
         check_errors(h, cfg),
         check_latency(h, cfg),
         check_volume(t, cfg),
@@ -356,6 +459,10 @@ class TransitionStore(Protocol):
         """decision_id of a gate PROMOTE for exactly this pair, if any."""
         ...
 
+    def gate_bundle(self, decision_id: str) -> dict[str, Any]:
+        """The stored evidence bundle of a gate decision."""
+        ...
+
 
 class Registry(Protocol):
     def aliases(self, name: str) -> dict[str, str]: ...
@@ -411,11 +518,18 @@ class Controller:
         self.approved_alias = approved_alias
 
     def start(
-        self, file_type: str, model_name: str, candidate: str, now: datetime, demo: bool = False
+        self,
+        file_type: str,
+        model_name: str,
+        candidate: str,
+        now: datetime,
+        demo: bool = False,
+        note: str = "",
     ) -> Transition:
         """Open a rollout (state APPROVED). Needs the gate's PROMOTE for exactly this
         candidate vs the current production and the approved alias on the candidate; with
-        `demo`, a version tagged demo=true instead (recorded as such)."""
+        `demo`, a version tagged demo=true instead (recorded as such). `note` is appended to
+        the recorded reason."""
         aliases = self.registry.aliases(model_name)
         production = aliases.get(self.cfg.fallback_alias)
         if production is None:
@@ -436,6 +550,10 @@ class Controller:
                 f"DEMO approval: {model_name}/{candidate} is tagged {self.cfg.demo_tag}=true; "
                 "the release gate was skipped for the Stage 6 demonstration"
             )
+            # a demo version is built from production's own model: it must agree with it
+            expected = ExpectedDisagreement.must_agree(
+                f"demo copy of {model_name}/{tags.get('source_version', '?')}"
+            )
         else:
             if aliases.get(self.approved_alias) != candidate:
                 raise RolloutError(
@@ -451,6 +569,9 @@ class Controller:
                     f"{model_name}/{production}"
                 )
             reason = f"gate decision {did}: PROMOTE"
+            expected = expected_from_gate_bundle(self.store.gate_bundle(did), did)
+        if note:
+            reason = f"{reason}; {note}"
         rollout_id = f"{file_type}-v{candidate}-{now.strftime('%Y%m%dT%H%M%SZ')}"
         t = self.store.append(
             latest,
@@ -462,7 +583,7 @@ class Controller:
             to_state=State.APPROVED,
             actor="controller",
             reason=reason,
-            signals={},
+            signals={"expected_disagreement": expected.as_dict()},
         )
         reconcile(self.registry, t, self.cfg)  # every ring on production to begin with
         log.info("rollout_started", rollout_id=rollout_id, reason=reason)
@@ -503,13 +624,19 @@ class Controller:
                 reconcile(self.registry, nxt, self.cfg)
                 return nxt, None
             ring = STATE_RING[cur.to_state]
-            traffic = self.meter.traffic(cur, self.store.first(cur.rollout_id), ring)
+            start = self.store.first(cur.rollout_id)
+            traffic = self.meter.traffic(cur, start, ring)
             if traffic.canaries_in_ring < self.cfg.canaries.required_per_ring:
                 sent = self.canaries.send(ring, file_type, cur.candidate_version)
                 if sent:
                     log.info("rollout_canaries_sent", rollout_id=cur.rollout_id, ring=ring, n=sent)
+            exp = start.signals.get("expected_disagreement")
             signals = WatchSignals(
-                traffic, self.meter.health(cur.candidate_label, cur.production_label)
+                traffic,
+                self.meter.health(cur.candidate_label, cur.production_label),
+                ExpectedDisagreement.from_dict(exp)
+                if exp
+                else ExpectedDisagreement.must_agree("not recorded: must agree"),
             )
             verdict = evaluate(signals, self.cfg)
             evidence = {"verdict": verdict.as_dict(), "signals": signals.as_dict()}

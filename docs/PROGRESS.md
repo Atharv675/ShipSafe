@@ -1,6 +1,8 @@
 # Progress
 
 > **HANDOFF (2026-11-22)**
+> - **Stage 7 DONE (2026-11-23):** paired-scoring rollout signal (part A) + main experiment (part B). Results and 5 conclusions in `docs/RESULTS.md`: P1 ships 5/18 harmful, P2 4/17, gate 0/2 but blocks 5 of 7 better candidates (all via its disagreement check). Data in `$SENTINEL_DATA_DIR/results/experiment*.parquet`, MLflow experiment `sentinel-experiment`. Re-run: `make experiment` (imports in `$SENTINEL_DATA_DIR/experiment/Win64/`). **Next: Stage 8** after the owner's go-ahead.
+> - **Stage 7 (2026-11-22):** on an existing database run `make migrate` (adds 009) and `make up`.
 > - **Stage 6 DONE (2026-11-22):** API routes by ring (`ring0_model`/`ring1_model`/`ring2_model`, fallback `production`); controller `make rollout CANDIDATE=<v> [FILE_TYPE=] [DEMO=1]`, `make rollout-status`, `make kill-switch`, `make rollout-timeline`, `make demo-models`, `make demo-reset`; append-only `rollout_transitions`. On an existing database: add `SENTINEL_ROLLOUT_DB_PASSWORD` + `SENTINEL_ADMIN_API_KEY` to `.env`, `docker compose up -d postgres`, `make migrate`, `make rollout-init`, `make up`. Demo results in `docs/ROLLOUT_DEMO.md`. Registry left on v1 everywhere. Unreplayed weeks left: Win64 63-64, Win32 59-64. **Next: Stage 7 (main experiment)** after the owner's go-ahead; start a fresh session.
 > - **Win32 through Stages 4-5 (2026-11-21):** `sentinel-win32` v2 candidate registered, weeks 53-55 replayed (89,998 = 89,998), gate → **REJECT** (`docs/gate/Win32-v2-vs-v1-20261121T062053Z.md`). Use `FILE_TYPE=Win32` with `make replay`, `make replay-counts` and `make gate`. **Next: Stage 6 (OPTIONAL) or Stage 7** after the owner's go-ahead.
 > - **Stage 5 DONE (2026-11-20):** `make gate CANDIDATE=<v> [GATE_WEEKS=...]`, `make gate-verify`, policy `configs/gate_policy.yaml` (v1.0.0), decisions in append-only `gate_decisions` + `docs/gate/`. First real decision: Win64 v2 vs v1 on weeks 53-55 → **REJECT**. Run `make migrate` on an existing database (adds gate_decisions + `sentinel_gate`; needs `SENTINEL_GATE_DB_PASSWORD` in `.env` and `docker compose up -d postgres` first). **Next: Stage 6 (ring rollout, OPTIONAL)** after the owner's go-ahead.
@@ -20,8 +22,8 @@
 | 3 | Serving service | DONE |
 | 4 | Replay stream and shadow scoring | DONE |
 | 5 | The release gate | DONE |
-| 6 | Ring rollout and automatic rollback [OPTIONAL] | DONE (awaiting owner go-ahead) |
-| 7 | The main experiment | TODO |
+| 6 | Ring rollout and automatic rollback [OPTIONAL] | DONE |
+| 7 | The main experiment (+ paired-scoring rollout signal) | DONE |
 | 8 | Observability, alerts and load testing | TODO |
 | 9 | ML dashboard (Streamlit) | TODO |
 | 10 | Hardening, CI and handover [STOP] | TODO |
@@ -275,3 +277,63 @@ Owner rules: no git/GitHub commands by the assistant; wait for go-ahead after ev
 
 ### Stage 6 DONE (2026-11-22)
 - Done-when met: both simulations (bad model rolled back in ring0; good model reaches COMPLETE), plus the kill switch, shown with timelines in `docs/ROLLOUT_DEMO.md`.
+
+## Stage 7 — The main experiment (+ paired-scoring rollout signal)
+
+Owner go-ahead 2026-11-22: "add it in stage 7 and start stage 7" (the paired-scoring signal proposed after Stage 6 is part A of this stage).
+
+### Plan
+
+**Part A: paired scoring in the rollout (local stack)**
+- Serving: in a ring that serves a model other than `production`, the API also scores the file with production (shared model cache, no extra load) and stores `reference_version`, `reference_score`, `reference_verdict` (model verdict, before overrides) in lineage. A failure of the reference score never fails the request. Migration `009_stage7.sql`.
+- Controller: new watch signal `disagreement`: in the ring under rollout, the share of files where the candidate flags and production clears ("new flags") and the reverse ("cleared"), compared with what was approved. Expected rates come from the gate decision that opened the rollout (its disagreement tables) and are recorded in the APPROVED row; a demo copy of production is expected to agree with it (0). Breach when the live rate's lower Wilson bound is above expected + `max_disagreement_increase` (absolute). This covers the last ring, where the flag rate can't be compared.
+- Pure statistic `disagreement_check` in `evaluate.py`; unit tests (bad 0.5 cut-off caught in ring0 by disagreement alone, identical model passes, last ring covered, missing reference scores → waiting); re-run the BAD demo on unreplayed weeks with canaries switched off (`--no-canaries`) to show it is caught on disagreement alone.
+
+**Part B: the main experiment (offline, Win64)**
+- Timeline (configs/experiment.yaml): retrain every W = 2 weeks at T = 52, 54, ..., 62 with each retraining policy (all_history, last_n_weeks 26, recency_weighted). 18 candidates.
+- Release policies, each running its own production chain per retraining policy, starting from v1:
+  - P1 auto-promote every retrain (deploys at T);
+  - P2 promote if validation AUC is higher (candidate vs current production on the candidate's own calibration weeks <= T; deploys at T);
+  - P3 Sentinel Gate: `gate.checks.run_checks` + `decide` unchanged (policy 1.0.0) on the shadow weeks T+1..T+2 vs the production at decision time, decided `label_wait_days` = 28 days later (T + 6) with only labels known by then; deploys then.
+- Harmful = over the following H = 4 weeks (capped at week 64) the new model's recall at 0.1% FPR is below the model it replaced, OR it flags a never-break file at its shipped threshold. Good update blocked = a candidate not promoted that would have been better (higher recall, no never-break hit) over the same weeks.
+- Repeats: 50 bootstrap resamples of the weekly streams (files resampled within each week, all models paired), plus the unresampled run. Models are trained once (18 retrains on Kaggle); retraining per seed is out of reach.
+- Drift: PSI on the top-20 features (v1 gain importance; decile bins from v1's fit weeks) and on production's scores, window T-1..T vs T-5..T-2. Alert rule in config; report alert precision for harmful candidates.
+- Kaggle notebook `notebooks/stage7_experiment.ipynb` (owner runs it, split by retraining policy if needed): rebuild + verify splits, retrain the candidates, score every model (v1 included, uploaded) on weeks 45-64 + never-break set, per-week feature histograms. Exports scores only (no features).
+- Local (sandbox): `make experiment-import BUNDLE=...`, `make experiment` → `data/results/experiment.parquet` + MLflow run (`sentinel-experiment`) + `docs/RESULTS.md` (one table, two charts, 5 honest conclusions).
+- Code: `src/sentinel/experiment/{scores,simulate,drift,report}.py`, `scripts/experiment_kaggle.py`, `scripts/run_experiment.py`; PSI in `evaluate.py`.
+- Tests: deterministic for a seed; no test-week data in any threshold or calibration (v1's from weeks <= 51, each candidate's from weeks <= T); gate never sees a label after its decision time; harm is only measured after deployment; P1/P2/P3 on synthetic streams (a clearly worse candidate is blocked by P3, promoted by P1); PSI against a hand calculation.
+
+### Check results so far (2026-11-22)
+
+**Part A: paired scoring (DONE)**
+- `make lint` clean (ruff, format, mypy strict on 49 files). `make test`: **237 passed**, 3 skipped (integration modules), coverage 97%.
+- `make test-integration`: **18 passed**. New: `test_traffic_query_counts_paired_disagreements` inserts paired rows as the API role in a rolled-back transaction and checks the counts (6 events, 5 paired, 2 new flags, 1 cleared; canaries and unpaired rows excluded).
+- `make migrate` (009) and `make up`: the API serves by ring with a 4th, production-only manager (shared cache, no extra load).
+- Real-stack demos (`docs/ROLLOUT_DEMO.md` sections 4-5, tables `docs/rollout/6-*.md`, `7-*.md`):
+  - fresh BAD Win64 v5 (0.5 cut-off), **canaries off**: rolled back in ring0 after 59.8 s by `[disagreement]` alone, 4.55% of 66 paired files newly flagged (limit 1.00%). 113 ring0 files exposed, 4 newly flagged; the API stopped serving v5 10 s after the rollback.
+  - reusing BAD v4 was refused at once by `[never_break]`, from its Stage 6 canary in the lineage (by design).
+  - GOOD Win32 v3: COMPLETE in 365.5 s with 0 disagreements in every ring, ring2 included; then `make demo-reset FILE_TYPE=Win32`.
+- Registry after the demos: v1 serves every ring for both types. New demo version `sentinel-win64` v5 (BAD, never served beyond 113 ring0 files). Unreplayed weeks left: Win32 62-64 only.
+
+**Part B: experiment code (DONE), data (WAITING for the owner's Kaggle runs)**
+- Code: `configs/experiment.yaml`, `src/sentinel/experiment/{export,scores,simulate,report}.py`, `scripts/{experiment_kaggle,run_experiment,pack_v1}.py`, `notebooks/stage7_experiment.ipynb`, Make targets `v1-zip`, `experiment-import`, `experiment`. New statistics in `evaluate.py`: `population_stability_index`, `score_bin_counts`, `disagreement_check`, `expected_disagreement_upper`.
+- Tests (`tests/unit/test_experiment.py`, 13): P1 ships the clearly worse candidate that P2 and the gate block; the gate promotes a clearly better one; chains replace production only on promotion; the gate sees only its shadow weeks and labels known at its decision time; a never-break hit is harmful even with better recall; deterministic for a seed; leakage guard refuses test-week thresholds/calibration; PSI = hand calculation; report + charts + RESULTS.md auto-section keeps hand-written text; **end to end on synthetic splits**: retrain → score export (no feature columns) → zip → verified import (tampered or extra files refused) → merge of two runs → simulate.
+- Real v1 bundle loads with the experiment loader; its feature schema matches the cleaned Win64 data.
+- Built: `dist/sentinel_gate_code.zip` (80 files, sha256 `0a726747…`) and `dist/sentinel_v1_Win64.zip` (sha256 `53542bbc…`, 4 allow-listed files).
+
+**Owner steps (Kaggle, 3 runs, one per retraining policy):** attach both zips as inputs to `notebooks/stage7_experiment.ipynb`, set `POLICIES`/`PART` in cell 1, run, and download `sentinel_stage7_Win64_<policy>.zip`. Then, locally: `make experiment-import ZIP=<zip>` for each zip, then `make experiment`. Cross-check: `last_n_weeks_T52` must reproduce Stage 4's v2 threshold 0.9999800. Remaining after the data arrives: `docs/RESULTS.md` (table, two charts, 5 honest conclusions), MLflow run, Stage 7 DONE.
+
+### Check results (experiment, 2026-11-23)
+- Kaggle zips (owner): `last_n_weeks` sha256 `1eaf1cee…`, `all_history` `9ca802f5…`, `recency_weighted` `1e2f672b…` (~19.5 MB each). `make experiment-import` ×3: allow-list + sha256 verified; 18 candidates + v1.
+- All three runs: rebuild check "identical content", fingerprint `c824866c…`, 199,990 scored rows, identical v1 scores and threshold. Cross-check OK: `last_n_weeks_T52` threshold 0.9999799689 = Stage 4 v2. No candidate flags a never-break file at training.
+- `make experiment` (50 resamples + real stream, 2,754 decision rows): `experiment.parquet`, `experiment_weekly.parquet` (seed, fingerprint, commit in metadata), `docs/results/harmful_promotions.png`, `recall_over_time.png`, `docs/RESULTS.md` (table + 5 conclusions), MLflow run `stage7-Win64` FINISHED (10 params, 12 metrics, 5 artifacts).
+- Headline (real stream): P1 18 promotions / 5 harmful / 0 of 13 good blocked; P2 17 / 4 / 0 of 13; P3 gate 2 / 0 / 5 of 7. Mean recall at 0.1% FPR 90.4% / 90.5% / 88.4%. Drift: 1 alert, 0 of 5 harmful caught.
+- `make lint` clean (49 files); `make test` 237 passed, 3 skipped, 97%.
+
+### Issues found and fixed (Stage 7)
+- Kaggle unpacks uploaded zips into folders: the notebook's v1 cell now accepts the zip or its unpacked folder (same allow-list, sha256 printed).
+- `make experiment-import` cannot take a path with a space (make splits words): zips were copied to a space-free folder first.
+- MLflow run failed writing artifacts to `./mlruns` (read-only repo mount): `run_experiment.py` now creates `sentinel-experiment` with the registry's artifact root, like `models/registry.py`. The half-made experiment (id 3, one FAILED run) was renamed `sentinel-experiment-failed-20261123`, not deleted.
+
+### Stage 7 DONE (2026-11-23)
+- Done-when met: `docs/RESULTS.md` has one table, two charts and 5 conclusions, including two that do not favour the gate (it blocks most good updates; holding back cost ~2 recall points and doubled shipped FPR). Saved to MLflow and `data/results/experiment.parquet`. Tests: deterministic for a seed; no test-week data in thresholds or calibration.

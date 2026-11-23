@@ -63,6 +63,13 @@ def kill_and_time(
         sleep(poll)
 
 
+class NoCanaries:
+    """CanarySender that sends nothing (`start --demo --no-canaries`)."""
+
+    def send(self, ring: str, file_type: str, candidate_version: str) -> int:
+        return 0
+
+
 def main() -> None:  # pragma: no cover - drives the running stack (`make rollout ...`)
     import httpx
 
@@ -88,6 +95,9 @@ def main() -> None:  # pragma: no cover - drives the running stack (`make rollou
     s.add_argument("--file-type", required=True)
     s.add_argument("--candidate", required=True)
     s.add_argument("--demo", action="store_true")
+    # demo only: no never-break canaries, to show the paired-scoring signal on its own (a
+    # rollout without canaries can roll back but never advance: never-break stays waiting)
+    s.add_argument("--no-canaries", action="store_true")
     s.add_argument("--watch", action="store_true")
     for name in ("watch", "status"):
         sub.add_parser(name).add_argument("--file-type", required=True)
@@ -188,11 +198,16 @@ def main() -> None:  # pragma: no cover - drives the running stack (`make rollou
         return out
 
     rings = load_replay_config().rings
+    no_canaries = args.cmd == "start" and args.no_canaries
+    if no_canaries and not args.demo:
+        raise SystemExit("--no-canaries is only allowed with --demo")
     controller = Controller(
         store,
         registry,
         LineageMeter(os.environ["SENTINEL_ROLLOUT_DSN"], cfg, fetch_stats),
-        ApiCanarySender(
+        NoCanaries()
+        if no_canaries
+        else ApiCanarySender(
             api,
             cfg,
             rings,
@@ -204,7 +219,16 @@ def main() -> None:  # pragma: no cover - drives the running stack (`make rollou
     )
     if args.cmd == "start":
         try:
-            controller.start(ft, names[ft], str(args.candidate), datetime.now(UTC), args.demo)
+            controller.start(
+                ft,
+                names[ft],
+                str(args.candidate),
+                datetime.now(UTC),
+                args.demo,
+                note="never-break canaries OFF for this demo (paired-scoring signal alone)"
+                if no_canaries
+                else "",
+            )
         except RolloutError as exc:
             raise SystemExit(str(exc)) from exc
         if not args.watch:

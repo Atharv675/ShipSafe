@@ -50,11 +50,19 @@ class SharedModelSource:
 class RingRouter:
     """Picks the ring's model for a request; `refresh` hot-reloads every ring."""
 
-    def __init__(self, managers: Mapping[str, ModelManager], rings: RingsConfig) -> None:
+    def __init__(
+        self,
+        managers: Mapping[str, ModelManager],
+        rings: RingsConfig,
+        reference: ModelManager | None = None,
+    ) -> None:
+        """`reference` serves `production` only (no ring alias): in a ring whose model differs
+        from it, the API also scores the file with it (Stage 7 paired scoring)."""
         if set(managers) != set(RING_ORDER):
             raise ValueError(f"need one manager per ring {RING_ORDER}")
         self._managers = dict(managers)
         self._rings = rings
+        self._reference = reference
         self._refreshing = threading.Lock()
 
     @classmethod
@@ -75,6 +83,7 @@ class RingRouter:
                 for r in RING_ORDER
             },
             rings,
+            ModelManager(shared, names, rollout.fallback_alias, metrics),
         )
 
     @classmethod
@@ -88,6 +97,15 @@ class RingRouter:
     def get(self, tenant_id: str, feature_schema_version: str) -> tuple[str, LoadedModel | None]:
         ring = self.ring_of(tenant_id)
         return ring, self._managers[ring].get(feature_schema_version)
+
+    def reference_for(self, model: LoadedModel, feature_schema_version: str) -> LoadedModel | None:
+        """Production's model for this schema when it is a DIFFERENT version from `model`."""
+        if self._reference is None:
+            return None
+        ref = self._reference.get(feature_schema_version)
+        if ref is None or ref.label == model.label:
+            return None
+        return ref
 
     @property
     def ready(self) -> bool:
@@ -108,6 +126,8 @@ class RingRouter:
                 if id(m) not in done:  # `single`: one shared manager refreshed once
                     done[id(m)] = m.refresh()
                 out[r] = done[id(m)]
+            if self._reference is not None:
+                out["reference"] = self._reference.refresh()
             return out
 
     def status(self) -> list[dict[str, Any]]:

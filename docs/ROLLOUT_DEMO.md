@@ -79,10 +79,48 @@ The good model needed three attempts. The first two were rolled back although no
   - The share of malware in the stream changes within a week, so a short recent window can't be compared with a long baseline.
 - **Fix:** production is compared over the **same period**, the traffic of rings still on production since the current ring switched. In the last ring nothing runs on production alongside it, so the flag rate isn't compared there. It was already compared on the same period in ring0 and ring1, and canaries, errors and latency still apply.
 
+## Stage 7 addition: paired scoring (2026-11-22)
+
+The flag rate compares different files: candidate files in one ring against production files in other rings. So small changes drown in noise (Finding 2 above). Since Stage 7, in every ring that serves the candidate, the API also scores each file with production and stores production's version, score and verdict in the lineage row. The new `disagreement` signal counts, on the **same files**, how often the candidate flags what production clears ("new flags") and the reverse ("cleared"). It compares each rate with what was approved:
+- with a gate PROMOTE, the gate's own disagreement tables, recorded in the APPROVED row;
+- for a demo copy of production, 0.
+
+A breach needs the live rate's lower Wilson bound above the approved upper bound + 1 point. Production keeps scoring alongside in ring2 too, so the last ring is covered now.
+
+### 4. Bad model caught by paired scoring alone (canaries off)
+
+`Win64-v5-20261122T091833Z` ([full table](rollout/6-bad-model-paired-scoring.md)), Win64 week 64 at 100 events/s. v5 is a fresh copy of the BAD 0.5 cut-off model. `make rollout CANDIDATE=5 DEMO=1 NO_CANARIES=1`: no never-break canaries were sent (allowed only with `--demo`; recorded in the APPROVED row).
+
+| t (s) | Change | Reason |
+|---|---|---|
+| 0.0 | → APPROVED | demo approval; never-break canaries OFF (paired-scoring signal alone) |
+| 1.6 | APPROVED → RING0 | `ring0_model` → v5 |
+| 59.8 | RING0 → **ROLLED_BACK** | [disagreement] flags that production clears: 4.55% of 66 (CI 1.56–12.53%, limit 1.00%), expected from demo copy of sentinel-win64/1 |
+
+- The API picked up v5 about 35 s after the alias moved (30 s poll). The rollback came about 20 s after the first v5 verdict, after only 66 paired files. The flag rate check was still waiting for 300 files, and at this size could not have told the models apart anyway.
+- **Exposure:** 113 ring0 files were scored by v5, 4 of them newly flagged against production, 0 newly cleared. The API stopped serving v5 10 s after the rollback.
+- A first attempt reused the Stage 6 BAD version v4 (`Win64-v4-20261122T091445Z`). It was rolled back after 11 s by `[never_break]`, before serving a single file, because v4's flagged canary from Stage 6 is still in the lineage. Canary results are counted across rollouts on purpose: a version that ever flagged a never-break file is stopped at once. Demonstrating the new signal on its own therefore needed a fresh version.
+
+### 5. Good model still reaches COMPLETE (no false alarm, last ring covered)
+
+`Win32-v3-20261122T092116Z` ([full table](rollout/7-good-model-paired-scoring-complete.md)), Win32 weeks 59–61 at 300 events/s, canaries on:
+
+| t (s) | Change | Disagreement (new flags / cleared) |
+|---|---|---|
+| 0.4 | APPROVED → RING0 | |
+| 176.9 | RING0 → RING1 | 0 / 0 of 323 paired files |
+| 288.0 | RING1 → RING2 | 0 / 0 of 1,502 |
+| 365.5 | RING2 → **COMPLETE** | 0 / 0 of 3,424 (ring2, where the flag rate is not compared) |
+
+Then `make demo-reset FILE_TYPE=Win32` put production back on v1. Every ring serves v1 for both types again.
+
+**Cost:** the extra production score runs inside the candidate's request. So the candidate's p99 includes it: ring0 126 ms vs production 103 ms under a 300 events/s replay on the single-worker API, inside the 2× + 25 ms limit. Stage 8's load test will measure it properly.
+
 ## Honest limits
 
 - **Not a gate-approved rollout.** The gate approved neither real candidate (Stage 5: both REJECT), so every rollout here used a demo model and skipped the gate, recorded in each APPROVED row. With a gate PROMOTE the controller needs no `--demo`; that path is covered by unit tests only.
-- **The flag rate is a weak signal on this replay.** The traffic is half malware, so even a 6× rise in false alarms barely moves it, and the canaries carry the never-break protection. On real, mostly clean traffic the flag rate would be far more sensitive.
+- **The flag rate is a weak signal on this replay.** The traffic is half malware, so even a 6× rise in false alarms barely moves it. On real, mostly clean traffic it would be far more sensitive. Since Stage 7, paired scoring (section 4) is the sensitive signal, and the canaries carry the never-break protection.
+- **Paired scoring can't tell new false alarms from newly caught malware.** Labels arrive days later, so the signal can only check that the candidate behaves as approved. A gate-approved candidate is allowed the disagreement the gate measured (plus 1 point). That path is unit-tested on the real Stage 5 bundle, but no gate-approved rollout has run on the stack.
 - **Error rate and latency come from the API's in-process metrics.** They're cumulative since the API started, and the latency check compares the candidate's recent samples with production's most recent 10,000 under the same load. Stage 8 moves them to PostgreSQL `ops_metrics`.
-- **The last ring has no flag-rate comparison** (see Finding 2). A problem that only appears in ring2's tenants and only shows in the flag rate would not be caught there.
+- **The last ring has no flag-rate comparison** (see Finding 2). Since Stage 7 the paired disagreement signal covers ring2 instead.
 - **A rolled-back model keeps serving until the API's next poll.** That was up to 12 s here, with the poll every 30 s. The kill switch skips the wait by reloading at once.

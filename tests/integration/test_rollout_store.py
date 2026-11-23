@@ -8,11 +8,14 @@ from __future__ import annotations
 
 import os
 import uuid
+from dataclasses import astuple
+from datetime import UTC, datetime, timedelta
 
 import psycopg
 import pytest
 
 from sentinel.rollout.store import INSERT, LOCK, SELECT_LATEST, TRAFFIC_SQL, like_prefix
+from sentinel.serving.lineage import INSERT_PREDICTIONS, PredictionRecord
 
 pytestmark = pytest.mark.integration
 
@@ -104,4 +107,55 @@ def test_traffic_query_runs_as_the_rollout_role() -> None:
                 "canary": like_prefix("canary-"),
             },
         ).fetchone()
-    assert row == (0, 0, 0, 0, 0, 0)
+    assert row == (0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+
+def test_traffic_query_counts_paired_disagreements() -> None:
+    """Stage 7: rows carrying production's reference score are counted per direction."""
+    cand, prod = f"it-model-{uuid.uuid4().hex[:8]}/2", "it-model/1"
+    now = datetime.now(UTC)
+
+    def rec(i: int, score: float, ref_verdict: str | None, tenant: str = "t") -> PredictionRecord:
+        return PredictionRecord(
+            request_id=uuid.uuid4().hex,
+            file_id=f"f{i}",
+            tenant_id=tenant,
+            model_version=cand,
+            feature_schema_version="it",
+            threshold=0.5,
+            score=score,
+            verdict="malicious" if score > 0.5 else "benign",
+            override_applied=False,
+            ts=now,
+            event_id=f"it:{uuid.uuid4().hex}",
+            ring="ring0",
+            reference_version=prod if ref_verdict else None,
+            reference_score=0.9 if ref_verdict == "malicious" else 0.1 if ref_verdict else None,
+            reference_verdict=ref_verdict,
+        )
+
+    rows = [
+        rec(0, 0.9, "benign"),  # candidate flags, production clears
+        rec(1, 0.9, "benign"),
+        rec(2, 0.1, "malicious"),  # candidate clears, production flags
+        rec(3, 0.9, "malicious"),  # agree
+        rec(4, 0.1, "benign"),  # agree
+        rec(5, 0.9, None),  # no reference score: not paired
+        rec(6, 0.9, "benign", tenant="canary-ring0-0001"),  # canary: never counted
+    ]
+    with psycopg.connect(API_DSN) as conn, conn.transaction(force_rollback=True):
+        conn.cursor().executemany(INSERT_PREDICTIONS, [astuple(r) for r in rows])
+        row = conn.execute(
+            TRAFFIC_SQL,
+            {
+                "cand": cand,
+                "prod": prod,
+                "ring": "ring0",
+                "since": now - timedelta(minutes=1),
+                "start": now - timedelta(minutes=1),
+                "canary": like_prefix("canary-"),
+            },
+        ).fetchone()
+    assert row is not None
+    events, _, _, _, _, _, paired, new_flags, cleared = row
+    assert (events, paired, new_flags, cleared) == (6, 5, 2, 1)

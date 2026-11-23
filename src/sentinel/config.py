@@ -44,6 +44,10 @@ class Settings(BaseSettings):
     def splits_dir(self) -> Path:
         return self.data_dir / "splits"
 
+    @property
+    def results_dir(self) -> Path:
+        return self.data_dir / "results"
+
 
 class _Frozen(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -359,6 +363,8 @@ class RolloutSignalsConfig(_Frozen):
     max_p99_ratio: float = Field(ge=1)
     p99_slack_ms: float = Field(ge=0)
     min_latency_samples: int = Field(ge=1)
+    max_disagreement_increase: float = Field(ge=0, lt=1)
+    min_reference_coverage: float = Field(gt=0, le=1)
 
 
 class RolloutDemoConfig(_Frozen):
@@ -430,3 +436,64 @@ def load_rollout_config(path: Path | None = None) -> RolloutConfig:
 
 def load_serving_config(path: Path | None = None) -> ServingConfig:
     return ServingConfig.model_validate(load_yaml(path or CONFIG_DIR / "serving.yaml"))
+
+
+# ------------------------------------------------------------------ Stage 7: experiment
+
+
+class WeekRange(_Frozen):
+    first: int = Field(ge=1)
+    last: int = Field(ge=1)
+
+    @property
+    def weeks(self) -> list[int]:
+        return list(range(self.first, self.last + 1))
+
+
+class DriftConfig(_Frozen):
+    top_features: int = Field(ge=1)
+    bins: int = Field(ge=2)
+    recent_weeks: int = Field(ge=1)
+    baseline_weeks: int = Field(ge=1)
+    feature_psi_alert: float = Field(gt=0)
+    min_features_alerting: int = Field(ge=1)
+    score_psi_alert: float = Field(gt=0)
+
+
+class ExperimentConfig(_Frozen):
+    file_type: str
+    seed: int
+    retrain_weeks: list[int] = Field(min_length=1)
+    retrain_policies: list[RetrainPolicyName] = Field(min_length=1)
+    score_weeks: WeekRange
+    test_weeks: WeekRange
+    shadow_weeks: int = Field(ge=1)
+    harm_weeks: int = Field(ge=1)
+    harm_margin: float = Field(ge=0)
+    min_harm_weeks: int = Field(ge=1)
+    bootstrap_resamples: int = Field(ge=0)
+    drift: DriftConfig
+
+    @model_validator(mode="after")
+    def _consistent(self) -> ExperimentConfig:
+        if self.retrain_weeks != sorted(set(self.retrain_weeks)):
+            raise ValueError("retrain_weeks must be increasing and distinct")
+        if not (self.score_weeks.first <= self.test_weeks.first <= self.test_weeks.last):
+            raise ValueError("test weeks must lie inside the scored weeks")
+        if self.test_weeks.last != self.score_weeks.last:
+            raise ValueError("scored weeks must end with the last test week")
+        lookback = self.drift.recent_weeks + self.drift.baseline_weeks
+        if min(self.retrain_weeks) - lookback + 1 < self.score_weeks.first:
+            raise ValueError("drift windows reach before the first scored week")
+        return self
+
+    def model_ids(self) -> list[str]:
+        return [candidate_id(p, t) for t in self.retrain_weeks for p in self.retrain_policies]
+
+
+def candidate_id(policy: str, as_of_week: int) -> str:
+    return f"{policy}_T{as_of_week}"
+
+
+def load_experiment_config(path: Path | None = None) -> ExperimentConfig:
+    return ExperimentConfig.model_validate(load_yaml(path or CONFIG_DIR / "experiment.yaml"))

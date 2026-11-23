@@ -355,3 +355,74 @@ def rate_increase_check(
     return RateComparison(
         candidate, candidate_n, production, production_n, c_ci, p_ci, limit, breach
     )
+
+
+@dataclass(frozen=True)
+class DisagreementCheck:
+    """Live share of paired files where two models disagree in one direction, against the
+    share that was expected (approved)."""
+
+    disagreements: int
+    n: int
+    ci: tuple[float, float]
+    expected_upper: float  # upper end of the expected rate (0 = the models must agree)
+    limit: float  # breach when ci[0] > limit
+    breach: bool
+
+    def as_dict(self) -> dict[str, Any]:
+        d = asdict(self)
+        d["rate"] = self.disagreements / self.n if self.n else None
+        return d
+
+
+def disagreement_check(
+    disagreements: int,
+    n: int,
+    expected_upper: float,
+    max_increase: float,
+    confidence: float = 0.95,
+) -> DisagreementCheck:
+    """Do the models disagree CLEARLY more often than approved?
+
+    Both models score the same files, so file mix and drift cancel out. Breach only when the
+    lower Wilson bound of the live disagreement rate exceeds `expected_upper + max_increase`
+    (absolute), so noise in a few hundred files cannot cause a breach; no files, no breach.
+    """
+    if max_increase < 0 or not 0 <= expected_upper <= 1:
+        raise ValueError("need max_increase >= 0 and 0 <= expected_upper <= 1")
+    ci = wilson_interval(disagreements, n, confidence)
+    limit = expected_upper + max_increase
+    return DisagreementCheck(disagreements, n, ci, expected_upper, limit, n > 0 and ci[0] > limit)
+
+
+def expected_disagreement_upper(k: int, n: int, confidence: float = 0.95) -> float:
+    """Upper Wilson bound of an expected rate measured as k of n (e.g. by the release gate).
+    n == 0 means "no disagreement expected at all" (a copy of production): 0."""
+    return 0.0 if n == 0 else wilson_interval(k, n, confidence)[1]
+
+
+def population_stability_index(
+    reference_counts: ArrayLike, current_counts: ArrayLike, epsilon: float = 1e-4
+) -> float:
+    """PSI = sum (cur - ref) * ln(cur / ref) over bins, from per-bin COUNTS; empty bins are
+    floored at `epsilon` (as a share) so the log is finite. 0 = identical distributions;
+    rule of thumb: < 0.1 stable, 0.1-0.25 moderate shift, > 0.25 large shift."""
+    ref = np.asarray(reference_counts, dtype=np.float64)
+    cur = np.asarray(current_counts, dtype=np.float64)
+    if ref.shape != cur.shape or ref.ndim != 1 or ref.size < 2:
+        raise ValueError("need two 1-D count arrays of the same length (>= 2 bins)")
+    if (ref < 0).any() or (cur < 0).any() or ref.sum() == 0 or cur.sum() == 0:
+        raise ValueError("counts must be >= 0 and each side must have at least one row")
+    p = np.maximum(ref / ref.sum(), epsilon)
+    q = np.maximum(cur / cur.sum(), epsilon)
+    return float(np.sum((q - p) * np.log(q / p)))
+
+
+def score_bin_counts(scores: ArrayLike, edges: ArrayLike) -> npt.NDArray[np.int64]:
+    """Counts of `scores` in the bins defined by interior `edges` (len(edges) + 1 bins)."""
+    s = np.asarray(scores, dtype=np.float64)
+    e = np.asarray(edges, dtype=np.float64)
+    out: npt.NDArray[np.int64] = np.bincount(
+        np.searchsorted(e, s, side="right"), minlength=e.size + 1
+    ).astype(np.int64)
+    return out

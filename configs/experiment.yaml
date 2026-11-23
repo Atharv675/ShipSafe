@@ -1,0 +1,41 @@
+# Stage 7: the main experiment. How often does each release policy ship a model that is
+# actually worse later? Reasoning in docs/DECISIONS.md (Stage 7). Nothing here is tuned on
+# test weeks: every rule below was fixed before any experiment result existed.
+file_type: Win64            # 60,000 benign test files; Win32 would triple the Kaggle time
+seed: 20241122              # bootstrap seed (LightGBM seed comes from configs/train.yaml)
+
+# Retraining: at the end of each of these weeks (T) one candidate per retraining policy is
+# trained with configs/retrain.yaml rules (labels known by T; threshold + calibration on the
+# 4 newest weeks <= T). Every 2 weeks from the end of training to the last test week.
+retrain_weeks: [52, 54, 56, 58, 60, 62]
+retrain_policies: [all_history, last_n_weeks, recency_weighted]
+
+# Every model is scored on these weeks (P2's validation weeks and drift windows reach back
+# to T - 5 = 47 at T = 52; the test weeks are 53-64).
+score_weeks: {first: 45, last: 64}
+test_weeks: {first: 53, last: 64}
+
+# P3 (Sentinel Gate): the candidate is shadow-scored on the 2 weeks after T, then the gate
+# (configs/gate_policy.yaml, unchanged) decides label_wait_days after the shadow window ends,
+# using only labels known by then. P1 and P2 decide at T.
+shadow_weeks: 2
+
+# Harm: over the H weeks after a model goes live (capped at the last test week), its recall
+# at the operating FPR (gate_policy.operating_fpr) is below the model it replaced by more than
+# harm_margin, OR it flags a never-break file at its shipped threshold.
+harm_weeks: 4
+harm_margin: 0.0
+min_harm_weeks: 1           # fewer following weeks -> the promotion cannot be judged (excluded)
+
+# Repeats: the weekly streams are resampled (files drawn with replacement within each week,
+# the same draw for every model) and the whole simulation re-run. Resample 0 = the real data.
+bootstrap_resamples: 50
+
+drift:
+  top_features: 20          # by v1's total gain
+  bins: 10                  # deciles of v1's fit weeks (feature PSI) / production's calibration weeks (score PSI)
+  recent_weeks: 2           # window ending at T ...
+  baseline_weeks: 4         # ... compared with the window just before it
+  feature_psi_alert: 0.25   # "large shift" rule of thumb
+  min_features_alerting: 3
+  score_psi_alert: 0.10     # "moderate shift" rule of thumb on production's scores
