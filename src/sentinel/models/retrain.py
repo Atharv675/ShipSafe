@@ -68,7 +68,9 @@ def plan_retrain_windows(
     weeks = sorted(int(w["week"]) for w in manifest["weeks"])
     if as_of_week not in weeks:
         raise ValueError(f"week {as_of_week} is not in this dataset")
-    known = [w for w in weeks if w <= as_of_week]  # never anything after T
+    # never anything after T; with a label delay (Stage 7b), only weeks whose labels exist by T
+    newest = as_of_week - cfg.label_delay_weeks
+    known = [w for w in weeks if w <= newest]
     if len(known) <= cfg.calibration_weeks:
         raise ValueError(f"T = week {as_of_week} leaves no weeks to fit on")
     calibration = known[-cfg.calibration_weeks :]

@@ -25,6 +25,7 @@
 | 5 | The release gate | DONE |
 | 6 | Ring rollout and automatic rollback [OPTIONAL] | DONE |
 | 7 | The main experiment (+ paired-scoring rollout signal) | DONE |
+| 7b | Release-policy backtest (owner brief, 2 passes) | IN PROGRESS |
 | 8 | Observability, alerts and load testing | DONE |
 | 9 | ML dashboard (Streamlit) | TODO |
 | 10 | Hardening, CI and handover [STOP] | TODO |
@@ -440,3 +441,30 @@ Owner go-ahead 2026-11-23: "finish the stage 8 first" (the owner's P1-P4 backtes
   - `make lint` clean (60 files).
   - `make test`: 281 passed, 4 skipped, 96% (dashboard tests 18 -> 22).
   - `make dashboard-check` (live, cached path): 4 pages, 14 charts, 0.5-3.0 s per page.
+
+## Stage 7b — Release-policy backtest (owner brief, two passes; STOP after Pass 1)
+
+Owner go-ahead 2026-11-24 ("now the corrections ... I had told before"). Owner answers: label delay **6 weeks**; never-break **both** (benign set + malware must-catch set); Kaggle family/signature export **yes**; early labels **simulated, marked**; X = 0.5 pts, Y = 0.05 pp FPR/week, Z = 10%, K = 4 weeks, N = 10, A = 90%; live cut-off may use benign labels known at t; Stage 7 candidates **retrained point-in-time** (weeks <= T-6).
+
+Found while checking (reported to owner):
+- EMBER2024 records hold **no signer identity** (Authenticode = 8 numbers): "top-N signers" cannot be computed; proposed substitute = signature status (unsigned / signed / self-signed), to confirm before Pass 2.
+- Under the 6-week rule the Stage 7 candidates used labels not yet available at T (e.g. T=52 calibrated on weeks 49-52; only <= 46 labelled) -> retrain.
+- ~20% of malware has no family (Dot_Net sample: 79.5% with family) -> each such file is its own bootstrap cluster (stated assumption).
+
+### Plan
+- `RetrainConfig.label_delay_weeks` (default 0 = unchanged); `scripts/experiment_kaggle.py --label-delay-weeks 6`; `notebooks/stage7b_candidates.ipynb` (3 runs, one per retraining policy).
+- `src/sentinel/backtest/metadata.py`, `scripts/export_metadata_kaggle.py`, `notebooks/stage7b_metadata.ipynb`: per-file family, family_confidence, num_certs, self_signed (no feature vectors). Validated locally on real Dot_Net raw records (64 weeks, 320,000 files = published unique count).
+- Pass 1 (`src/sentinel/backtest/`): family-clustered bootstrap CIs; unchanged-model noise (pre-test weeks only) -> M = max(noise, X); harmful = loss > M with CI excluding 0; P1-P3 re-scored point-in-time (P3 decides at T+8); weekly cut-off recalibration (cap Y) on/off; simulated early-label agreement; report + STOP.
+
+### Build status (2026-11-24)
+- **Code ready.**
+  - `src/sentinel/backtest/{metadata,pass1,report}.py`, `configs/backtest.yaml` (`BacktestConfig`).
+  - Statistics in `evaluate.py`: `cluster_bootstrap_rows` (stratified, vectorised), `percentile_interval`, `capped_threshold`.
+  - `scripts/{export_metadata_kaggle,run_backtest}.py`, `notebooks/stage7b_{metadata,candidates}.ipynb`.
+  - Make targets: `backtest-import-meta`, `backtest-import`, `backtest-pass1`.
+- **Tests.**
+  - `tests/unit/test_backtest.py` (17): family bootstrap keeps families whole; capped recalibration; noise from pre-test weeks only; outcome rules; P3 decides only when its shadow labels exist (T+8); weak candidates blocked by P2/P3 and shipped by P1; original P3 flagged leaky; recalibration pulls shipped FPR toward target; simulated early labels marked; leaky candidates refused; deterministic; report keeps hand-written text.
+  - Plus a 6-week window test in `test_retrain.py`.
+  - `make lint` clean (64 files); `make test` 298 passed, 4 skipped, 95%.
+- **Bug found by the tests and fixed:** P1/P2 decisions at T = 52 (serving from week 53) were never taken; the loop started at the first test week.
+- **Waiting for the owner's Kaggle runs:** metadata (1 run) and point-in-time candidates (3 runs). Then `make backtest-import-meta`, `make backtest-import` x3, `make backtest-pass1`, then plain statements, then STOP before Pass 2.

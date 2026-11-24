@@ -27,7 +27,8 @@ DOCS_RW = "--mount=type=bind,source=$(SRC)/docs,target=/work/docs"
 	test-integration migrate import-replay register-candidate replay replay-counts replay-check \
 	gate-verify rollout-init demo-models rollout rollout-watch rollout-status kill-switch demo-reset \
 	rollout-timeline experiment-import experiment v1-zip dashboard dashboard-check demo \
-	load-bodies load-test load-report load-bench load-render profile-api db-outage-check
+	load-bodies load-test load-report load-bench load-render profile-api db-outage-check \
+	backtest-import-meta backtest-import backtest-pass1
 
 help:
 	@echo Targets: setup lint test test-integration data download inspect report clean-data cleaning-report bundle lock sandbox train gate up down sample-request dashboard demo
@@ -346,3 +347,22 @@ profile-api:
 # With PostgreSQL stopped the API keeps answering; afterwards lineage writing resumes.
 db-outage-check:
 	bash scripts/db_outage_check.sh
+
+# ---------------------------------------------------------------- Stage 7b: backtest
+# Kaggle: notebooks/stage7b_metadata.ipynb (once) + notebooks/stage7b_candidates.ipynb (x3).
+#   make backtest-import-meta ZIP=<sentinel_stage7b_meta_Win64.zip>
+#   make backtest-import ZIP=<sentinel_stage7b_Win64_<policy>.zip>     (once per zip)
+#   make backtest-pass1 [RESAMPLES=200]   -> data/results/backtest_pass1_*.parquet, docs/BACKTEST.md
+backtest-import-meta:
+	@test -n "$(ZIP)" || (echo "usage: make backtest-import-meta ZIP=<zip>" && exit 1)
+	$(SANDBOX) $(DATA_RW) "--mount=type=bind,source=$(ZIP),target=/in/$(notdir $(ZIP)),readonly" \
+		$(IMAGE) python scripts/run_backtest.py import-meta --zip /in/$(notdir $(ZIP))
+
+backtest-import:
+	@test -n "$(ZIP)" || (echo "usage: make backtest-import ZIP=<zip>" && exit 1)
+	$(SANDBOX) $(DATA_RW) "--mount=type=bind,source=$(ZIP),target=/in/$(notdir $(ZIP)),readonly" \
+		$(IMAGE) python scripts/run_backtest.py import --zip /in/$(notdir $(ZIP))
+
+backtest-pass1:
+	$(SANDBOX) $(DATA_RW) $(DOCS_RW) -e GIT_PYTHON_REFRESH=quiet -e HOME=/tmp $(IMAGE) \
+		python scripts/run_backtest.py pass1 $(if $(RESAMPLES),--resamples $(RESAMPLES))

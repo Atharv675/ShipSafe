@@ -1,0 +1,35 @@
+# Stage 7b: the owner's release-policy backtest (brief of 2026-11-23, answers 2026-11-24).
+# Every value here is fixed BEFORE running; nothing is tuned on the weeks it judges.
+# Reasoning in docs/DECISIONS.md (Stage 7b).
+file_type: Win64
+seed: 20241122
+label_delay_weeks: 6          # a decision at week t sees labelled weeks <= t - 6 only
+operating_fpr: 0.001          # recall is measured at 0.1% FPR
+retrain_weeks: [52, 54, 56, 58, 60, 62]
+retrain_policies: [all_history, last_n_weeks, recency_weighted]
+test_weeks: {first: 53, last: 64}
+shadow_weeks: 2               # P3: shadow T+1..T+2, decides when their labels exist (T+8)
+harm_weeks: 4                 # outcome window after deployment (capped at the last week)
+min_harm_weeks: 1
+
+harm:
+  recall_floor_points: 0.5    # X: business floor for acceptable recall loss
+  # week-to-week noise of an UNCHANGED model (v1), measured only on weeks it was not fitted
+  # on and that are not test weeks: v1 fits weeks 1-47 (calibration 48-51, eval 52)
+  noise_weeks: {first: 48, last: 52}
+  confidence: 0.95
+  bootstrap_resamples: 200    # family-clustered (malware by family, benign by file)
+
+recalibration:
+  max_fpr_move_pp: 0.05       # Y: the cut-off may move its clean-pool FPR at most 0.05 pp/week
+  clean_pool_weeks: 4         # benign files of the newest 4 labelled weeks (<= t - 6)
+
+early_labels:                 # SIMULATED (EMBER2024 has none): final label with flips
+  flip_rates: [0.05, 0.10]
+
+p4:                           # Pass 2 only; fixed now so nothing is tuned on results
+  flag_rate_tolerance: 0.10   # Z
+  new_family_weeks: 4         # K
+  top_signers: 10             # N (EMBER2024 has no signer identity: see DECISIONS.md)
+  min_early_agreement: 0.90   # A
+  min_clean_files_warn: 50000

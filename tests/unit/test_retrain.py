@@ -63,6 +63,22 @@ def test_windows_per_policy_never_pass_t(splits: Layout) -> None:  # noqa: F811
         plan_retrain_windows(m, cfg, "all_history", 2)
 
 
+def test_label_delay_keeps_every_window_at_least_delay_weeks_before_t(
+    splits: Layout,  # noqa: F811
+) -> None:
+    """Stage 7b (owner decision 2026-11-24): labels arrive 6 weeks late, so a candidate at T
+    may only fit, calibrate and set its threshold on weeks <= T - delay."""
+    m = load_manifest(splits.splits_root, FT)
+    delayed = _rcfg().model_copy(update={"label_delay_weeks": 2})
+    w = plan_retrain_windows(m, delayed, "all_history", 7)
+    assert (w.fit, w.calibration) == ([1, 2, 3], [4, 5])
+    assert max(w.used) <= 7 - 2
+    assert w.as_of == week_end(m, 7)  # still decided at T, just with older labels
+    assert plan_retrain_windows(m, _rcfg(), "all_history", 7).calibration == [6, 7]  # default 0
+    with pytest.raises(ValueError, match="no weeks to fit"):
+        plan_retrain_windows(m, delayed, "all_history", 4)
+
+
 def test_recency_weights() -> None:
     w = recency_weights(np.array([7, 5, 3, 1]), 7, 2.0)
     assert w.tolist() == [1.0, 0.5, 0.25, 0.125]

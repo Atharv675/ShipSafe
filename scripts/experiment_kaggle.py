@@ -52,6 +52,12 @@ def main() -> None:
     p.add_argument("--out-zip", type=Path, required=True)
     p.add_argument("--policies", nargs="+", choices=exp.retrain_policies)
     p.add_argument("--threads", type=int, default=os.cpu_count() or 0)
+    p.add_argument(
+        "--label-delay-weeks",
+        type=int,
+        default=0,
+        help="Stage 7b: a candidate at T reads only weeks <= T - this (labels 6 weeks late)",
+    )
     args = p.parse_args()
     configure_logging(settings.log_level)
     ft = args.file_type
@@ -72,7 +78,7 @@ def main() -> None:
         never_break,
         args.work,
         train,
-        load_retrain_config(),
+        load_retrain_config().model_copy(update={"label_delay_weeks": args.label_delay_weeks}),
         exp,
         args.policies or list(exp.retrain_policies),
         threads=args.threads,
@@ -85,7 +91,10 @@ def main() -> None:
     hist = feature_histograms(args.splits_dir, ft, feats, v1.info["fit_weeks"], exp.drift.bins)
     (out_dir / HIST_FILE).write_text(json.dumps(hist) + "\n", encoding="utf-8")
     info_path = out_dir / "export_info.json"
-    full = json.loads(info_path.read_text(encoding="utf-8")) | {"rebuild_check": check}
+    full = json.loads(info_path.read_text(encoding="utf-8")) | {
+        "rebuild_check": check,
+        "label_delay_weeks": args.label_delay_weeks,
+    }
     info_path.write_text(json.dumps(full, indent=1) + "\n", encoding="utf-8")
     sums = write_export_zip(out_dir, args.out_zip)
     log.info("experiment_export_written", zip=str(args.out_zip), models=info["models"], sha256=sums)

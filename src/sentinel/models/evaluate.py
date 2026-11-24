@@ -439,3 +439,64 @@ def linear_slope(x: ArrayLike, y: ArrayLike) -> float:
         return float("nan")
     dx = xs - xs.mean()
     return float((dx * (ys - ys.mean())).sum() / (dx * dx).sum())
+
+
+def cluster_bootstrap_rows(
+    clusters: ArrayLike, strata: ArrayLike, rng: np.random.Generator
+) -> npt.NDArray[np.int64]:
+    """Row indices of one stratified cluster bootstrap resample (Stage 7b).
+
+    Within each stratum (e.g. malware / benign) the distinct clusters (e.g. malware families;
+    a file with no family is its own cluster) are drawn with replacement, as many as the
+    stratum has, and every row of a drawn cluster is taken. Rows of one family therefore
+    move together, so a CI reflects family-to-family variation, not only file noise.
+    """
+    c = np.asarray(clusters)
+    s = np.asarray(strata)
+    if c.shape != s.shape or c.ndim != 1:
+        raise ValueError("clusters and strata must be 1-D and the same length")
+    out: list[npt.NDArray[np.int64]] = []
+    for stratum in np.unique(s):
+        rows = np.flatnonzero(s == stratum)
+        _, inverse = np.unique(c[rows], return_inverse=True)
+        order = rows[np.argsort(inverse, kind="stable")]  # rows grouped by cluster
+        sizes = np.bincount(inverse)
+        starts = np.concatenate(([0], np.cumsum(sizes)[:-1]))
+        picks = rng.integers(0, sizes.size, size=sizes.size)
+        lens = sizes[picks]
+        # gather every row of every drawn cluster without a Python loop
+        first_out = np.concatenate(([0], np.cumsum(lens)[:-1]))
+        offsets = np.repeat(starts[picks] - first_out, lens) + np.arange(int(lens.sum()))
+        out.append(order[offsets])
+    return np.concatenate(out).astype(np.int64) if out else np.empty(0, dtype=np.int64)
+
+
+def percentile_interval(values: ArrayLike, confidence: float = 0.95) -> tuple[float, float]:
+    """Central percentile interval of bootstrap values (NaNs ignored)."""
+    v = np.asarray(values, dtype=np.float64)
+    v = v[np.isfinite(v)]
+    if v.size == 0:
+        return float("nan"), float("nan")
+    lo, hi = np.percentile(v, [100 * (1 - confidence) / 2, 100 * (1 + confidence) / 2])
+    return float(lo), float(hi)
+
+
+def capped_threshold(
+    benign_scores: ArrayLike, current: float, target_fpr: float, max_fpr_move: float
+) -> float:
+    """Recalibrate a cut-off toward `target_fpr` on a pool of known-benign scores, moving it
+    at most `max_fpr_move` in pool FPR per step (Stage 7b, weekly recalibration).
+
+    The pool FPR at the current cut-off is measured; the new cut-off reaches the target if
+    that is within the cap, otherwise stops at current FPR +- cap (the threshold for that FPR
+    on the same pool). `max_fpr_move = inf` means "jump straight to the target"."""
+    b = np.asarray(benign_scores, dtype=np.float64)
+    if b.size == 0:
+        return float(current)
+    y0 = np.zeros(b.size, dtype=np.int8)
+    now = float((b > current).mean())
+    want = target_fpr
+    if abs(want - now) > max_fpr_move:
+        want = now + max_fpr_move if want > now else now - max_fpr_move
+    want = min(max(want, 0.0), 1.0 - 1e-12)
+    return threshold_at_fpr(y0, b, want)

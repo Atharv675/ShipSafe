@@ -228,6 +228,9 @@ class RetrainConfig(_Frozen):
     policy: RetrainPolicyName
     policies: RetrainPolicies
     mlflow_alias: str
+    # Stage 7b (owner decision 2026-11-24): labels arrive this many weeks late, so a candidate
+    # at T reads only weeks <= T - label_delay_weeks (0 = Stage 4/7 behaviour, unchanged)
+    label_delay_weeks: int = Field(default=0, ge=0)
 
 
 class RingsConfig(_Frozen):
@@ -629,3 +632,65 @@ def load_monitoring_config(path: Path | None = None) -> MonitoringConfig:
 
 def load_alert_rules(path: Path | None = None) -> AlertRulesConfig:
     return AlertRulesConfig.model_validate(load_yaml(path or CONFIG_DIR / "alert_rules.yaml"))
+
+
+# ------------------------------------------------------------------ Stage 7b: backtest
+
+
+class HarmConfig(_Frozen):
+    recall_floor_points: float = Field(ge=0)
+    noise_weeks: WeekRange
+    confidence: float = Field(gt=0, lt=1)
+    bootstrap_resamples: int = Field(ge=1)
+
+
+class RecalibrationConfig(_Frozen):
+    max_fpr_move_pp: float = Field(gt=0)
+    clean_pool_weeks: int = Field(ge=1)
+
+
+class EarlyLabelsConfig(_Frozen):
+    flip_rates: list[float] = Field(min_length=1)
+
+
+class P4Config(_Frozen):
+    flag_rate_tolerance: float = Field(gt=0)
+    new_family_weeks: int = Field(ge=1)
+    top_signers: int = Field(ge=1)
+    min_early_agreement: float = Field(gt=0, le=1)
+    min_clean_files_warn: int = Field(ge=1)
+
+
+class BacktestConfig(_Frozen):
+    file_type: str
+    seed: int
+    label_delay_weeks: int = Field(ge=0)
+    operating_fpr: float = Field(gt=0, lt=1)
+    retrain_weeks: list[int] = Field(min_length=1)
+    retrain_policies: list[RetrainPolicyName] = Field(min_length=1)
+    test_weeks: WeekRange
+    shadow_weeks: int = Field(ge=1)
+    harm_weeks: int = Field(ge=1)
+    min_harm_weeks: int = Field(ge=1)
+    harm: HarmConfig
+    recalibration: RecalibrationConfig
+    early_labels: EarlyLabelsConfig
+    p4: P4Config
+
+    @model_validator(mode="after")
+    def _point_in_time(self) -> BacktestConfig:
+        if self.harm.noise_weeks.last >= self.test_weeks.first:
+            raise ValueError("noise must be measured before the test weeks (never on them)")
+        return self
+
+    def labelled_upto(self, t: int) -> int:
+        """Newest week whose labels exist at a decision in week t."""
+        return t - self.label_delay_weeks
+
+    def p3_decision_week(self, as_of_week: int) -> int:
+        """P3 shadows T+1..T+shadow and decides when the last shadow week is labelled."""
+        return as_of_week + self.shadow_weeks + self.label_delay_weeks
+
+
+def load_backtest_config(path: Path | None = None) -> BacktestConfig:
+    return BacktestConfig.model_validate(load_yaml(path or CONFIG_DIR / "backtest.yaml"))
