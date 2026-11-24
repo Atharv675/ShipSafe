@@ -285,3 +285,13 @@ All of these were fixed before any experiment result existed. Nothing is tuned o
 - **Measured, not met.** The 500 req/s / p99 < 20 ms target was not reached on the shared 8-core laptop: 306 req/s, all requests answered, 0 errors.
   - Owner decision 2026-11-24: record the measured numbers.
   - Not done: sampling root-request traces, more workers.
+
+### Dashboard design (2026-11-24)
+- **Order: overall health first, then the golden signals, then detail, with drill-down to traces.** This is the common guidance for operations dashboards. Each page answers "is something wrong, where, how bad" in its first row.
+- **Theme via Streamlit's theme config plus one Altair theme**, not CSS injection. CSS selectors depend on Streamlit's internal HTML and break between versions.
+- **Palette: the dataviz reference instance, dark steps.**
+  - Slots 1-4 were validated against surface `#1a1a19` (worst adjacent CVD ΔE 8.4).
+  - Rings keep fixed colours on every chart (colour follows the entity).
+  - Status colours never carry a series.
+- **Gaps are shown, never bridged.** Counts fall to 0 where there were no events; ratios and latency break the line, because unknown is not zero.
+- **Latency uses a symmetric-log y scale.** It is labelled "(log scale)" so the normal range stays readable next to multi-second spikes.

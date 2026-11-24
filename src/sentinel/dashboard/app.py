@@ -22,7 +22,14 @@ from sentinel.config import (
     load_serving_config,
 )
 from sentinel.dashboard import data as d
-from sentinel.dashboard.ops_pages import Context, alerts_page, model_live, service_health
+from sentinel.dashboard import theme
+from sentinel.dashboard.ops_pages import (
+    Context,
+    alerts_page,
+    model_live,
+    overview,
+    service_health,
+)
 
 LOOKBACKS = {
     "15 min": 15,
@@ -42,7 +49,11 @@ class CachedSource:
 
         @st.cache_data(ttl=ttl, show_spinner=False)
         def _q(name: str, sql: str, params: tuple[tuple[str, Any], ...]) -> pd.DataFrame:
-            return self._inner.query(name, sql, dict(params))
+            # lists were frozen to tuples only to be hashable for the cache; give them back as
+            # lists: psycopg sends a tuple as a record, but `= ANY(%s)` needs an array
+            return self._inner.query(
+                name, sql, {k: list(v) if isinstance(v, tuple) else v for k, v in params}
+            )
 
         self._q = _q
 
@@ -62,7 +73,13 @@ def _page(fn: Callable[[Context], None], ctx: Context) -> Callable[[], None]:
 
 
 def main(source: d.Source | None = None, now: datetime | None = None) -> None:
-    st.set_page_config(page_title="Sentinel Gate", layout="wide")
+    st.set_page_config(
+        page_title="Sentinel Gate · Operations",
+        page_icon=":material/shield:",
+        layout="wide",
+        initial_sidebar_state="expanded",
+    )
+    theme.register()
     mon = load_monitoring_config()
     rules = load_alert_rules()
     if source is None:
@@ -77,14 +94,20 @@ def main(source: d.Source | None = None, now: datetime | None = None) -> None:
         (i for i, k in enumerate(labels) if allowed[k] == mon.dashboard.default_lookback_minutes),
         0,
     )
-    with st.sidebar:
-        st.title("Sentinel Gate")
-        choice = st.selectbox("Time window", labels, index=default)
-        st.caption(
-            "Times are UTC. Data refreshes every "
-            f"{mon.dashboard.cache_ttl_seconds:g} s (rerun to update)."
-        )
     at = now or datetime.now(UTC)
+    with st.sidebar:
+        st.markdown("### :material/shield: Sentinel Gate")
+        st.caption("Malware-model release gate · operations")
+        choice = st.selectbox("Time window", labels, index=default)
+        if st.button("Refresh now", icon=":material/refresh:", width="stretch"):
+            st.cache_data.clear()
+        st.caption(
+            f"As of {at:%Y-%m-%d %H:%M:%S} UTC. Cached for {mon.dashboard.cache_ttl_seconds:g} s."
+        )
+        st.divider()
+        st.caption(
+            f"[Jaeger traces]({mon.tracing.jaeger_ui_url}) · metrics: PostgreSQL ops_metrics"
+        )
     ctx = Context(
         src=source,
         window=d.Window.last(allowed[choice], at, mon.dashboard.cache_ttl_seconds),
@@ -98,13 +121,30 @@ def main(source: d.Source | None = None, now: datetime | None = None) -> None:
         {
             "Operations": [
                 st.Page(
+                    _page(overview, ctx),
+                    title="Overview",
+                    url_path="overview",
+                    icon=":material/dashboard:",
+                    default=True,
+                ),
+                st.Page(
                     _page(service_health, ctx),
                     title="Service Health",
                     url_path="service-health",
-                    default=True,
+                    icon=":material/monitor_heart:",
                 ),
-                st.Page(_page(model_live, ctx), title="Model Live", url_path="model-live"),
-                st.Page(_page(alerts_page, ctx), title="Alerts", url_path="alerts"),
+                st.Page(
+                    _page(model_live, ctx),
+                    title="Model Live",
+                    url_path="model-live",
+                    icon=":material/model_training:",
+                ),
+                st.Page(
+                    _page(alerts_page, ctx),
+                    title="Alerts",
+                    url_path="alerts",
+                    icon=":material/notifications_active:",
+                ),
             ]
         }
     )

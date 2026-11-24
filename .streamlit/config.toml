@@ -1,0 +1,22 @@
+# Streamlit app theme (Stage 8 dashboard redesign). Same values as
+# src/sentinel/dashboard/theme.py (dark surfaces from the validated dataviz palette).
+[theme]
+base = "dark"
+primaryColor = "#3987e5"
+backgroundColor = "#0d0d0d"
+secondaryBackgroundColor = "#1a1a19"
+textColor = "#f0efec"
+font = "sans serif"
+baseRadius = "medium"
+borderColor = "#2c2c2a"
+showWidgetBorder = true
+
+[server]
+headless = true
+fileWatcherType = "none"
+
+[browser]
+gatherUsageStats = false
+
+[client]
+toolbarMode = "minimal"

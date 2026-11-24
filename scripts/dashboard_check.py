@@ -20,10 +20,13 @@ from datetime import UTC, datetime
 from sentinel.config import (load_alert_rules, load_monitoring_config, load_rollout_config,
                              load_serving_config)
 from sentinel.dashboard import data as d
+from sentinel.dashboard import theme
 from sentinel.dashboard.ops_pages import Context, {page}
+theme.register()
 mon = load_monitoring_config()
 now = datetime.now(UTC)
-ctx = Context(d.PostgresSource(os.environ["SENTINEL_DASHBOARD_DSN"]),
+from sentinel.dashboard.app import CachedSource
+ctx = Context(CachedSource(d.PostgresSource(os.environ["SENTINEL_DASHBOARD_DSN"]), 10),
               d.Window.last({minutes}, now, 1), mon, load_alert_rules(),
               load_serving_config().service_name, load_rollout_config().canaries.tenant_prefix,
               now)
@@ -36,7 +39,7 @@ def main() -> None:
     p.add_argument("--minutes", type=int, default=15)
     args = p.parse_args()
     report: dict[str, object] = {}
-    for page in ("service_health", "model_live", "alerts_page"):
+    for page in ("overview", "service_health", "model_live", "alerts_page"):
         t0 = time.perf_counter()
         at = AppTest.from_string(SCRIPT.format(page=page, minutes=args.minutes))
         at.run(timeout=120)

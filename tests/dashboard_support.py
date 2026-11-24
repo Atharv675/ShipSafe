@@ -28,6 +28,8 @@ COLUMNS: dict[str, list[str]] = {
         "reason",
     ],
     "alerts": ["id", "ts", "rule", "dedup_key", "labels", "state", "severity", "value", "message"],
+    "serving": ["ring", "model_version", "events", "last_seen"],
+    "score_hist": ["ring", "bin", "files"],
 }
 
 
@@ -51,6 +53,9 @@ def frames() -> dict[str, pd.DataFrame]:
         p99 = 31.0 if i == 12 else 6.0  # one latency spike above the 20 ms alert limit
         api.append((ts, 10, "latency_ms", mv1, 950, 1900.0, 1.8, 3.9, p99))
     api.append((_t(8), 10, "model_reloads", {**mv5, "how": "loaded"}, 1, 1.0, None, None, None))
+    api.append(
+        (_t(3), 10, "lineage_dropped", {"reason": "write_failed"}, 40, 40.0, None, None, None)
+    )
     lag = [
         (
             _t(10 - i),
@@ -139,6 +144,22 @@ def frames() -> dict[str, pd.DataFrame]:
         "override_rate": overrides,
         "rollouts": rollouts,
         "alerts": alerts,
+        "serving": pd.DataFrame(
+            [
+                ("ring0", "sentinel-win64/5", 250, _t(1)),
+                ("ring1", "sentinel-win64/1", 1250, _t(1)),
+                ("ring2", "sentinel-win64/1", 3500, _t(1)),
+            ],
+            columns=COLUMNS["serving"],
+        ),
+        "score_hist": pd.DataFrame(
+            [
+                (r, b, n)
+                for r in ("ring0", "ring1", "ring2")
+                for b, n in ((1, 900), (2, 40), (10, 12), (19, 30), (20, 800))
+            ],
+            columns=COLUMNS["score_hist"],
+        ),
     }
 
 

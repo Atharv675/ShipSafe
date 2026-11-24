@@ -280,3 +280,214 @@ class PostgresSource:  # pragma: no cover - needs the database (exercised on the
             cur = conn.execute(sql, dict(params))
             cols = [d.name for d in cur.description or []]
             return pd.DataFrame(cur.fetchall(), columns=cols)
+
+
+# ---------------------------------------------------------------------------- redesign (2026-11-24)
+
+SERVING_SQL = """
+SELECT ring, model_version, count(*) AS events, max(ts) AS last_seen
+FROM predictions
+WHERE ts >= %(start)s AND ts < %(end)s AND tenant_id NOT LIKE %(canary)s
+GROUP BY ring, model_version
+ORDER BY ring, model_version
+"""
+
+# model score distribution per ring: 20 equal-width bins on [0, 1] (bin 21 = exactly 1.0)
+SCORE_HIST_SQL = """
+SELECT ring, least(width_bucket(score, 0, 1, %(bins)s), %(bins)s) AS bin, count(*) AS files
+FROM predictions
+WHERE ts >= %(start)s AND ts < %(end)s AND tenant_id NOT LIKE %(canary)s
+GROUP BY 1, 2 ORDER BY 1, 2
+"""
+
+
+def per_bucket(series: pd.DataFrame, metric: str, how: str = "sum") -> pd.Series:
+    """One value per ts_bucket for a metric: summed counts ('sum'), or the worst p99 ('p99')
+    / mean gauge value ('gauge') across label sets and API workers."""
+    r = series[series["metric"] == metric]
+    if r.empty:
+        return pd.Series(dtype="float64")
+    if how == "p99":
+        out = r.groupby("ts_bucket")["p99"].max()
+    elif how == "gauge":
+        g = r.groupby("ts_bucket")[["sum", "count"]].sum()
+        out = g["sum"] / g["count"]
+    else:
+        out = r.groupby("ts_bucket")["count"].sum()
+    return out.sort_index().astype("float64")
+
+
+@dataclass(frozen=True)
+class Kpi:
+    """A headline value with its recent trend (for st.metric sparklines)."""
+
+    value: float | None
+    previous: float | None
+    trend: list[float]
+
+    @property
+    def delta(self) -> float | None:
+        if self.value is None or self.previous is None:
+            return None
+        return self.value - self.previous
+
+
+def kpi(values: pd.Series, points: int = 30) -> Kpi:
+    """Latest value, the value before it, and the last `points` values as the trend."""
+    v = values.dropna()
+    if v.empty:
+        return Kpi(None, None, [])
+    trend = [float(x) for x in v.iloc[-points:]]
+    prev = float(v.iloc[-2]) if len(v) >= 2 else None
+    return Kpi(float(v.iloc[-1]), prev, trend)
+
+
+def rate_per_second(counts: pd.Series, bucket_seconds: float) -> pd.Series:
+    return counts / bucket_seconds
+
+
+def ratio_series(num: pd.Series, den: pd.Series, min_den: float = 1) -> pd.Series:
+    d = den[den >= min_den]
+    return (num.reindex(d.index).fillna(0) / d).astype("float64")
+
+
+def drops(series: pd.DataFrame) -> pd.DataFrame:
+    """Rows lost on purpose (never blocking a request), per bucket and kind."""
+    kinds = {
+        "lineage_dropped": "lineage rows",
+        "ops_metrics_dropped": "metric rows",
+        "metrics_samples_dropped": "latency samples",
+    }
+    r = series[series["metric"].isin(list(kinds))]
+    if r.empty:
+        return pd.DataFrame(columns=["ts_bucket", "kind", "count"])
+    g = pd.DataFrame(r.groupby(["ts_bucket", "metric"], as_index=False)[["count"]].sum())
+    g["kind"] = g["metric"].map(kinds)
+    return g[["ts_bucket", "kind", "count"]]
+
+
+def status_mix(series: pd.DataFrame) -> pd.DataFrame:
+    """Answered requests per bucket by HTTP status class (2xx / 4xx / 5xx)."""
+    r = with_label(series[series["metric"] == "requests"], "status")
+    if r.empty:
+        return pd.DataFrame(columns=["ts_bucket", "status", "count"])
+    r["status"] = r["status"].str[0] + "xx"
+    return pd.DataFrame(r.groupby(["ts_bucket", "status"], as_index=False)[["count"]].sum())
+
+
+def ring_share(serving: pd.DataFrame) -> pd.DataFrame:
+    """Share of real events per ring (part-to-whole for a segmented bar)."""
+    if serving.empty:
+        return pd.DataFrame(columns=["ring", "events", "share"])
+    s = pd.DataFrame(
+        serving.assign(ring=serving["ring"].fillna("none"))
+        .groupby("ring", as_index=False)[["events"]]
+        .sum()
+    )
+    s["share"] = s["events"] / s["events"].sum()
+    return s.sort_values("ring", ignore_index=True)
+
+
+def score_histogram(hist: pd.DataFrame, bins: int) -> pd.DataFrame:
+    """Bin index -> score range start/end, and each ring's share of files per bin."""
+    if hist.empty:
+        return pd.DataFrame(columns=["ring", "bin", "score_lo", "score_hi", "files", "share"])
+    h = hist.assign(ring=hist["ring"].fillna("none")).copy()
+    h["score_lo"] = (h["bin"] - 1) / bins
+    h["score_hi"] = h["bin"] / bins
+    h["share"] = h["files"] / h.groupby("ring")["files"].transform("sum")
+    return h
+
+
+def rollout_segments(ro: pd.DataFrame, now: datetime) -> pd.DataFrame:
+    """Rollout states as time segments [start, end) per file type (for a timeline)."""
+    if ro.empty:
+        return pd.DataFrame(columns=["file_type", "rollout_id", "state", "start", "end"])
+    rows = []
+    for ft, g in ro.sort_values("ts").groupby("file_type"):
+        recs = g.to_dict("records")
+        for i, r in enumerate(recs):
+            end = recs[i + 1]["ts"] if i + 1 < len(recs) else now
+            rows.append(
+                {
+                    "file_type": ft,
+                    "rollout_id": r["rollout_id"],
+                    "state": r["to_state"],
+                    "start": r["ts"],
+                    "end": end,
+                }
+            )
+    return pd.DataFrame(rows)
+
+
+@dataclass(frozen=True)
+class AlertStats:
+    firing: int
+    episodes: int
+    mean_minutes_to_resolve: float | None
+    noisiest_rule: str | None
+    episodes_of_noisiest: int
+
+
+def alert_stats(history: pd.DataFrame, firing: pd.DataFrame) -> AlertStats:
+    closed = history[history["resolved"].notna()] if not history.empty else history
+    mttr = float(closed["minutes"].mean()) if len(closed) else None
+    noisy = str(history["rule"].value_counts().idxmax()) if len(history) else None
+    top = int(history["rule"].value_counts().max()) if len(history) else 0
+    return AlertStats(len(firing), len(history), mttr, noisy, top)
+
+
+def health(firing: pd.DataFrame) -> str:
+    """Overall state for the banner: critical if a page-severity alert fires, warning if
+    only lower severities fire, else good."""
+    if firing.empty:
+        return "good"
+    return "critical" if (firing["severity"] == "page").any() else "warning"
+
+
+def break_gaps(
+    df: pd.DataFrame, x: str, by: list[str], value: str, step_seconds: float, *, zero: bool
+) -> pd.DataFrame:
+    """Make idle stretches visible instead of drawing a line across them.
+
+    Wherever two consecutive points of a series are more than 1.5 steps apart:
+    - zero=True (counts, rates of events): the series drops to 0 for the gap (no requests
+      really means 0 requests per second);
+    - zero=False (ratios, latency, lag): one empty row starts the gap, so the line breaks
+      (unknown is not zero).
+    """
+    if df.empty:
+        return df
+    step = pd.Timedelta(seconds=step_seconds)
+    parts = []
+    groups = df.groupby(by, sort=False) if by else [((), df)]
+    for key, g in groups:
+        g = g.sort_values(x)
+        ts = pd.to_datetime(g[x])
+        gaps = ts.diff() > 1.5 * step
+        extra = []
+        keys = dict(zip(by, key if isinstance(key, tuple) else (key,), strict=False))
+        for prev, nxt in zip(ts.shift(1)[gaps], ts[gaps], strict=False):
+            if zero:
+                extra += [{**keys, x: prev + step, value: 0.0}, {**keys, x: nxt - step, value: 0.0}]
+            else:
+                extra.append({**keys, x: prev + step, value: float("nan")})
+        parts.append(g)
+        if extra:
+            parts.append(pd.DataFrame(extra))
+    out = pd.concat(parts, ignore_index=True)
+    return out.sort_values([*by, x], ignore_index=True)
+
+
+def clip_spans(df: pd.DataFrame, start_col: str, end_col: str, window: Window) -> pd.DataFrame:
+    """Keep spans that overlap the window and clip them to it (timelines)."""
+    if df.empty:
+        return df
+    s = pd.to_datetime(df[start_col], utc=True)
+    e = pd.to_datetime(df[end_col], utc=True)
+    lo, hi = pd.Timestamp(window.start), pd.Timestamp(window.end)
+    keep = (e >= lo) & (s <= hi)
+    out = df[keep].copy()
+    out[start_col] = s[keep].where(s[keep] >= lo, lo)
+    out[end_col] = e[keep].where(e[keep] <= hi, hi)
+    return out.reset_index(drop=True)

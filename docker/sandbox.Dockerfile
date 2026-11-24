@@ -48,6 +48,7 @@ WORKDIR /work
 FROM runtime AS app
 COPY src /app/src
 COPY configs /app/configs
+COPY .streamlit /app/.streamlit
 ENV PYTHONPATH=/app/src \
     GIT_PYTHON_REFRESH=quiet
 WORKDIR /app

@@ -416,3 +416,27 @@ Owner go-ahead 2026-11-23: "finish the stage 8 first" (the owner's P1-P4 backtes
   - API serves with the database stopped (unit and on the stack);
   - trace_id stored with predictions (unit and integration).
 - **Open:** the 500 req/s / p99 < 20 ms load target is not met on this machine (see LOAD_TEST.md).
+
+### Dashboard redesign (owner request, 2026-11-24)
+- **Layout.**
+  - New default **Overview** page: health banner with status icon and label, golden-signal KPI cards with sparklines, "Serving now" per ring, latest rollouts, recent alerts.
+  - **Service Health:** traffic, errors, log-scale latency with the 20 ms limit line, consumer lag, responses by status, dropped rows, and latency spikes linked to Jaeger.
+  - **Model Live:** KPI cards, flag rate by ring, verdict volume, ring traffic share, score distribution per ring, override rate, never-break canaries, rollout timeline.
+  - **Alerts:** KPI cards, firing cards, episode timeline, episodes by rule, history, rules.
+  - Every chart has a caption, a hover tooltip and a "data" table view.
+- **Visual system.**
+  - `src/sentinel/dashboard/theme.py` and `.streamlit/config.toml` hold a dark theme.
+  - The categorical palette was checked with the dataviz validator (dark mode: all checks pass).
+  - Status colours are used only for state, always with an icon and label.
+  - The registered Altair theme draws hairline solid grids and 2 px lines.
+- **Checked by rendering.** The live pages were screenshotted with headless Chromium in a hardened container, reached only over the compose network. This found:
+  - **(bug)** `CachedSource` passed list parameters to psycopg as tuples. Every page of the real app failed with "malformed array literal", and had since Stage 8. Unit tests use a fake source and `dashboard-check` bypassed the cache, so nothing caught it. Fixed, with a regression test; `dashboard-check` now goes through the cache.
+  - Lines bridged idle gaps: counts now drop to 0, ratios and latency break.
+  - One spike flattened the latency chart: now a symlog scale.
+  - The binned histogram drew no bars: now ranged columns from a zero baseline.
+  - Timelines stretched to the last event before the window: clipped to the window. Closed episodes from before the window no longer count.
+  - A zero delta showed a red badge: now no badge.
+- **Checks.**
+  - `make lint` clean (60 files).
+  - `make test`: 281 passed, 4 skipped, 96% (dashboard tests 18 -> 22).
+  - `make dashboard-check` (live, cached path): 4 pages, 14 charts, 0.5-3.0 s per page.
