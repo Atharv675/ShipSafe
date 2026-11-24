@@ -426,3 +426,16 @@ def score_bin_counts(scores: ArrayLike, edges: ArrayLike) -> npt.NDArray[np.int6
         np.searchsorted(e, s, side="right"), minlength=e.size + 1
     ).astype(np.int64)
     return out
+
+
+def linear_slope(x: ArrayLike, y: ArrayLike) -> float:
+    """Ordinary least-squares slope of y on x (Stage 8: is a gauge such as consumer lag
+    rising?). Needs at least two distinct x values; NaN otherwise."""
+    xs = np.asarray(x, dtype=np.float64)
+    ys = np.asarray(y, dtype=np.float64)
+    if xs.shape != ys.shape or xs.ndim != 1:
+        raise ValueError("x and y must be 1-D and the same length")
+    if xs.size < 2 or np.ptp(xs) == 0:
+        return float("nan")
+    dx = xs - xs.mean()
+    return float((dx * (ys - ys.mean())).sum() / (dx * dx).sum())

@@ -17,6 +17,7 @@ Run: uvicorn --factory sentinel.serving.app:build_app
 from __future__ import annotations
 
 import hmac
+import os
 import threading
 import time
 import uuid
@@ -27,19 +28,24 @@ from typing import Annotated, Any, Literal
 
 import numpy as np
 import numpy.typing as npt
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ConfigDict, Field
+from opentelemetry import trace
+from opentelemetry.trace import Span, SpanKind, StatusCode, Tracer
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from starlette.concurrency import run_in_threadpool
 
 from sentinel.config import RingsConfig, ServingConfig
 from sentinel.logging import get_logger
-from sentinel.monitoring.metrics import MetricsRecorder
+from sentinel.monitoring.metrics import MetricsRecorder, OpsMetricsWriter
+from sentinel.monitoring.tracing import context_from_headers, trace_id_of
 from sentinel.serving.lineage import PredictionRecord, PredictionSink
 from sentinel.serving.models import LoadedModel, ModelManager
 from sentinel.serving.overrides import OverrideStore, apply_override
 from sentinel.serving.rings import RingRouter
 
 KillSwitch = Callable[[str], dict[str, Any]]  # reason -> per-file-type result
+WORKER_HEADER = "X-Sentinel-Worker"  # which API worker process answered (Stage 8)
 
 log = get_logger(__name__)
 
@@ -126,25 +132,34 @@ def create_app(
     kill_switch: KillSwitch | None = None,
     admin_api_key: str | None = None,
     canary_prefix: str | None = None,
+    ops_writer: OpsMetricsWriter | None = None,
+    tracer: Tracer | None = None,
 ) -> FastAPI:
     """`background=False` (tests) means no poll threads: call models.refresh() yourself.
+    Stage 8: `ops_writer` (started with the background jobs) flushes the metrics to
+    ops_metrics every 10 s; `tracer` defaults to the global (no-op unless set up).
     The kill switch is enabled only when both `kill_switch` and `admin_api_key` are given.
     Requests from tenants starting with `canary_prefix` (the rollout's synthetic never-break
     canaries) are counted under `canary_*` metrics, so they never distort the real-traffic
     request, error and latency figures the rollout watches."""
     stop = threading.Event()
     router = models if isinstance(models, RingRouter) else RingRouter.single(models, _DEFAULT_RINGS)
+    tracer = tracer or trace.get_tracer("sentinel.serving")
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncGenerator[None]:
         if background:
             _every(cfg.poll_seconds, router.refresh, stop, "model-poller")
             _every(cfg.overrides.refresh_seconds, overrides.refresh, stop, "overrides-refresh")
+            if ops_writer is not None:
+                ops_writer.start()
         try:
             yield
         finally:
             stop.set()
             sink.close()
+            if ops_writer is not None:
+                ops_writer.close()
 
     app = FastAPI(title="Sentinel Gate scoring", version="1", lifespan=lifespan)
 
@@ -154,10 +169,50 @@ def create_app(
             metrics.inc(f"{kind}errors", {"model_version": label})
         return HTTPException(status_code=status, detail=detail)
 
-    @app.post("/v1/score", response_model=ScoreResponse)
-    def score(req: ScoreRequest) -> ScoreResponse:  # sync: runs in the threadpool
+    @app.post(
+        "/v1/score",
+        response_model=ScoreResponse,
+        openapi_extra={
+            "requestBody": {
+                "required": True,
+                "content": {"application/json": {"schema": ScoreRequest.model_json_schema()}},
+            }
+        },
+    )
+    async def score(request: Request) -> ScoreResponse:
+        # Stage 8 (load test): the body (~2,500 numbers) is decoded and validated in one pass
+        # by pydantic's native JSON validator. FastAPI's default (stdlib json.loads, then
+        # validation of the Python objects) cost ~4x the CPU. Same 422 on a bad body.
+        body = await request.body()
+        try:
+            req = ScoreRequest.model_validate_json(body)
+        except ValidationError as exc:
+            raise HTTPException(
+                status_code=422, detail=exc.errors(include_url=False, include_input=False)
+            ) from exc
+        return await run_in_threadpool(_traced_score, req, dict(request.headers))
+
+    def _traced_score(req: ScoreRequest, headers: dict[str, str]) -> ScoreResponse:
+        # Stage 8: continue the caller's trace (live consumer `consume` span) if it sent one
+        with tracer.start_as_current_span(
+            "score",
+            context=context_from_headers(headers),
+            kind=SpanKind.SERVER,
+            record_exception=False,
+            set_status_on_exception=False,
+        ) as span:
+            try:
+                return _score(req, span)
+            except HTTPException as exc:
+                span.set_attribute("http.status_code", exc.status_code)
+                if exc.status_code >= 500:
+                    span.set_status(StatusCode.ERROR)
+                raise
+
+    def _score(req: ScoreRequest, span: Span) -> ScoreResponse:
         t0 = time.perf_counter()
         request_id = uuid.uuid4().hex
+        span.set_attribute("sentinel.request_id", request_id)
         kind = "canary_" if canary_prefix and req.tenant_id.startswith(canary_prefix) else ""
         for field_name in ("file_id", "tenant_id", "event_id"):
             if len(getattr(req, field_name) or "") > cfg.max_id_length:
@@ -204,6 +259,8 @@ def create_app(
                 500, label, {"error": "scoring_failed", "request_id": request_id}, kind
             ) from exc
         model_malicious = raw > model.threshold
+        if kind and model_malicious:  # a never-break canary flagged by the model itself
+            metrics.inc("never_break_hits", {"model_version": label, "ring": ring})
         ref_version, ref_score, ref_verdict = _reference_score(
             router, model, req.feature_schema_version, x, request_id
         )
@@ -222,25 +279,30 @@ def create_app(
             )
             metrics.inc("override_changed_verdict", {"tenant_id": req.tenant_id})
         verdict: Verdict = MALICIOUS if final else BENIGN
-        sink.submit(
-            PredictionRecord(
-                request_id=request_id,
-                file_id=req.file_id,
-                tenant_id=req.tenant_id,
-                model_version=label,
-                feature_schema_version=req.feature_schema_version,
-                threshold=model.threshold,
-                score=raw,
-                verdict=verdict,
-                override_applied=applied,
-                ts=datetime.now(UTC),
-                event_id=req.event_id,
-                ring=ring,
-                reference_version=ref_version,
-                reference_score=ref_score,
-                reference_verdict=ref_verdict,
-            )
+        span.set_attributes(
+            {"sentinel.model_version": label, "sentinel.ring": ring, "sentinel.verdict": verdict}
         )
+        with tracer.start_as_current_span("log"):  # lineage hand-off (batched insert later)
+            sink.submit(
+                PredictionRecord(
+                    request_id=request_id,
+                    file_id=req.file_id,
+                    tenant_id=req.tenant_id,
+                    model_version=label,
+                    feature_schema_version=req.feature_schema_version,
+                    threshold=model.threshold,
+                    score=raw,
+                    verdict=verdict,
+                    override_applied=applied,
+                    ts=datetime.now(UTC),
+                    event_id=req.event_id,
+                    ring=ring,
+                    reference_version=ref_version,
+                    reference_score=ref_score,
+                    reference_verdict=ref_verdict,
+                    trace_id=trace_id_of(span),
+                )
+            )
         metrics.inc(f"{kind}requests", {"model_version": label, "status": "200"})
         metrics.observe(
             f"{kind}latency_ms", (time.perf_counter() - t0) * 1000, {"model_version": label}
@@ -269,8 +331,10 @@ def create_app(
         return router.status()
 
     @app.get("/v1/rings")
-    def rings() -> dict[str, dict[str, str | None]]:
-        """{ring: {file_type: version served now}}."""
+    def rings(response: Response) -> dict[str, dict[str, str | None]]:
+        """{ring: {file_type: version served now}} as seen by the worker process that
+        answers (Stage 8: several workers; header X-Sentinel-Worker = its process id)."""
+        response.headers[WORKER_HEADER] = str(os.getpid())
         return router.serving_versions()
 
     @app.post("/admin/rollback")
@@ -309,12 +373,15 @@ def build_app() -> FastAPI:  # pragma: no cover - wiring, exercised by `make up`
     """Production wiring from .env + configs/*.yaml (used by docker compose)."""
     from sentinel.config import (
         Settings,
+        load_monitoring_config,
         load_replay_config,
         load_rollout_config,
         load_serving_config,
         load_train_config,
     )
     from sentinel.logging import configure_logging
+    from sentinel.monitoring.metrics import postgres_ops_writer
+    from sentinel.monitoring.tracing import setup_tracing
     from sentinel.rollout.store import MlflowRegistry, PostgresTransitionStore, emergency_rollback
     from sentinel.serving.lineage import BatchedLineageWriter, postgres_batch_writer
     from sentinel.serving.models import MlflowModelSource
@@ -323,6 +390,8 @@ def build_app() -> FastAPI:  # pragma: no cover - wiring, exercised by `make up`
     settings = Settings()
     configure_logging(settings.log_level)
     cfg = load_serving_config()
+    mon = load_monitoring_config()
+    setup_tracing(mon.tracing.api_service_name, mon.tracing, settings.otlp_endpoint)
     rollout = load_rollout_config()
     if rollout.fallback_alias != cfg.model_alias:
         raise SystemExit("rollout.yaml fallback_alias must equal serving.yaml model_alias")
@@ -330,7 +399,8 @@ def build_app() -> FastAPI:  # pragma: no cover - wiring, exercised by `make up`
     if not settings.pg_dsn:
         raise SystemExit("SENTINEL_PG_DSN is not set")
     pg_dsn = settings.pg_dsn
-    metrics = MetricsRecorder(cfg.service_name, cfg.latency_samples)
+    metrics = MetricsRecorder(cfg.service_name, cfg.latency_samples, mon.metrics.window_max_samples)
+    ops_writer = OpsMetricsWriter([metrics], postgres_ops_writer(pg_dsn), mon.metrics.flush_seconds)
     source = MlflowModelSource(
         settings.tracking_uri, {n: ft for ft, n in names.items()}, cfg.predict_threads
     )
@@ -358,4 +428,5 @@ def build_app() -> FastAPI:  # pragma: no cover - wiring, exercised by `make up`
         kill_switch=kill,
         admin_api_key=key,
         canary_prefix=rollout.canaries.tenant_prefix,
+        ops_writer=ops_writer,
     )

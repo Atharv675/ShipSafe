@@ -1,0 +1,39 @@
+# Stage 8: observability. No Prometheus / Grafana: metrics in PostgreSQL ops_metrics, traces
+# in Jaeger, dashboards in Streamlit, alerts from a Python worker (configs/alert_rules.yaml).
+# Reasoning in docs/DECISIONS.md (Stage 8).
+
+metrics:
+  flush_seconds: 10             # each process writes one ops_metrics row per active series per window
+  # latency samples kept per series per window (500 req/s x 10 s = 5,000); beyond this the
+  # sample is dropped and counted (metric metrics_samples_dropped), count/sum stay exact
+  window_max_samples: 20000
+
+consumer_lag:
+  interval_seconds: 10          # committed vs latest offsets for the live and shadow groups
+  timeout_seconds: 5            # broker calls; on timeout the reading is skipped, not guessed
+  service: consumers            # ops_metrics.service of the lag rows
+
+retention:
+  run_every_hours: 24
+  downsample_after_hours: 24    # 10-second rows older than this become 1-minute rows
+  downsample_bucket_seconds: 60
+  delete_after_days: 14
+
+tracing:
+  # OTLP/HTTP endpoint of the Jaeger all-in-one collector; empty = tracing off (no trace_id)
+  endpoint: http://jaeger:4318/v1/traces
+  sample_ratio: 1.0             # requests without a parent span; children follow their parent
+  export_batch_size: 512
+  export_queue_size: 8192       # spans beyond this are dropped by the SDK, never block a request
+  jaeger_ui_url: http://127.0.0.1:16686
+  api_service_name: sentinel-api
+  live_consumer_service_name: sentinel-live-consumer
+
+dashboard:
+  cache_ttl_seconds: 10         # st.cache_data TTL
+  default_lookback_minutes: 60
+  max_lookback_minutes: 20160   # 14 days = the retention
+  top_tenants: 20               # override-rate table
+  # a latency bucket whose p99 is above the p99 alert threshold is listed as a spike with a
+  # Jaeger link to that service and time window (+- this margin)
+  spike_link_margin_seconds: 30

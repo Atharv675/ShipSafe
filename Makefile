@@ -26,7 +26,8 @@ DOCS_RW = "--mount=type=bind,source=$(SRC)/docs,target=/work/docs"
 	clean-data cleaning-report train baseline-report train-smoke gate up down sample-request \
 	test-integration migrate import-replay register-candidate replay replay-counts replay-check \
 	gate-verify rollout-init demo-models rollout rollout-watch rollout-status kill-switch demo-reset \
-	rollout-timeline experiment-import experiment v1-zip dashboard demo
+	rollout-timeline experiment-import experiment v1-zip dashboard dashboard-check demo \
+	load-bodies load-test load-report load-bench load-render profile-api db-outage-check
 
 help:
 	@echo Targets: setup lint test test-integration data download inspect report clean-data cleaning-report bundle lock sandbox train gate up down sample-request dashboard demo
@@ -47,14 +48,15 @@ hooks:
 	@echo "Install pre-commit on the host yourself (pipx install pre-commit) then: pre-commit install"
 
 lint:
-	$(SANDBOX) $(IMAGE) sh -c "ruff check src tests scripts && ruff format --check src tests scripts && mypy"
+	$(SANDBOX) $(IMAGE) sh -c "ruff check src tests scripts loadtest && ruff format --check src tests scripts loadtest && mypy"
 
 # Auto-fix formatting: only src/, tests/, scripts/ are mounted writable.
 format:
 	$(SANDBOX) "--mount=type=bind,source=$(SRC)/src,target=/work/src" \
 		"--mount=type=bind,source=$(SRC)/tests,target=/work/tests" \
 		"--mount=type=bind,source=$(SRC)/scripts,target=/work/scripts" \
-		$(IMAGE) sh -c "ruff check --fix src tests scripts; ruff format src tests scripts"
+		"--mount=type=bind,source=$(SRC)/loadtest,target=/work/loadtest" \
+		$(IMAGE) sh -c "ruff check --fix src tests scripts loadtest; ruff format src tests scripts loadtest"
 
 # Unit tests only; integration tests need the running stack (make up && make test-integration).
 test:
@@ -135,7 +137,7 @@ APP_IMAGE ?= sentinel-app:dev
 up:
 	docker build -f docker/sandbox.Dockerfile --target app -t $(APP_IMAGE) .
 	$(COMPOSE) up -d --wait
-	@echo "api: http://127.0.0.1:$${SENTINEL_API_PORT:-18080}  mlflow: http://127.0.0.1:5000  jaeger: http://127.0.0.1:16686"
+	@echo "api: http://127.0.0.1:$${SENTINEL_API_PORT:-18080}  mlflow: http://127.0.0.1:5000  jaeger: http://127.0.0.1:16686  dashboard: http://127.0.0.1:8501"
 
 down:
 	$(COMPOSE) down
@@ -153,14 +155,26 @@ test-integration: export SENTINEL_IT_ADMIN_DSN = postgresql://sentinel_admin:$(S
 test-integration: export SENTINEL_IT_API_DSN = postgresql://sentinel_api:$(SENTINEL_API_DB_PASSWORD)@postgres:5432/sentinel
 test-integration: export SENTINEL_IT_GATE_DSN = postgresql://sentinel_gate:$(SENTINEL_GATE_DB_PASSWORD)@postgres:5432/sentinel
 test-integration: export SENTINEL_IT_ROLLOUT_DSN = postgresql://sentinel_rollout:$(SENTINEL_ROLLOUT_DB_PASSWORD)@postgres:5432/sentinel
+test-integration: export SENTINEL_IT_MONITOR_DSN = postgresql://sentinel_monitor:$(SENTINEL_MONITOR_DB_PASSWORD)@postgres:5432/sentinel
+test-integration: export SENTINEL_IT_DASHBOARD_DSN = postgresql://sentinel_dashboard:$(SENTINEL_DASHBOARD_DB_PASSWORD)@postgres:5432/sentinel
 test-integration:
 	$(SANDBOX_NET) --network=sentinel_default -e GIT_PYTHON_REFRESH=quiet \
 		-e SENTINEL_API_URL=http://api:8000 -e SENTINEL_IT_ADMIN_DSN -e SENTINEL_IT_API_DSN \
-		-e SENTINEL_IT_GATE_DSN -e SENTINEL_IT_ROLLOUT_DSN \
+		-e SENTINEL_IT_GATE_DSN -e SENTINEL_IT_ROLLOUT_DSN -e SENTINEL_IT_MONITOR_DSN \
+		-e SENTINEL_IT_DASHBOARD_DSN \
 		$(DATA_RO) $(IMAGE) pytest -m integration --no-cov tests/integration
 
+# Stage 8 Streamlit app (also started by `make up`): http://127.0.0.1:8501
 dashboard:
-	@echo "dashboard: implemented in Stage 8" && exit 1
+	$(COMPOSE) up -d --wait dashboard
+	@echo "dashboard: http://127.0.0.1:8501  jaeger: http://127.0.0.1:16686"
+
+# Render every Operations page against the live database and print what it shows.
+MINUTES ?= 15
+dashboard-check: export SENTINEL_DASHBOARD_DSN = postgresql://sentinel_dashboard:$(SENTINEL_DASHBOARD_DB_PASSWORD)@postgres:5432/sentinel
+dashboard-check:
+	@$(SANDBOX_NET) --network=sentinel_default -e SENTINEL_DASHBOARD_DSN -e HOME=/tmp $(IMAGE) \
+		python scripts/dashboard_check.py --minutes $(MINUTES)
 
 demo:
 	@echo "demo: implemented in Stage 10" && exit 1
@@ -179,6 +193,9 @@ migrate:
 	$(COMPOSE) exec -T postgres sh /docker-entrypoint-initdb.d/008_rollout_role.sh
 	$(COMPOSE) exec -T postgres psql -v ON_ERROR_STOP=1 -U sentinel_admin -d sentinel \
 		-f /docker-entrypoint-initdb.d/009_stage7.sql
+	$(COMPOSE) exec -T postgres psql -v ON_ERROR_STOP=1 -U sentinel_admin -d sentinel \
+		-f /docker-entrypoint-initdb.d/010_stage8.sql
+	$(COMPOSE) exec -T postgres sh /docker-entrypoint-initdb.d/011_monitor_roles.sh
 
 # Verify + install a Kaggle replay export (test weeks + never-break set).
 ZIP ?=
@@ -287,3 +304,45 @@ experiment:
 v1-zip:
 	$(SANDBOX) $(DATA_RO) "--mount=type=bind,source=$(SRC)/dist,target=/work/dist" $(IMAGE) \
 		python scripts/pack_v1.py --file-type $(FILE_TYPE)
+
+# ---------------------------------------------------------------- Stage 8: load test
+# make load-bodies                          real Win64 feature records -> $(DATA_DIR)/loadtest
+# make load-test RUN=before [USERS=500 DURATION=5m]   Locust, headless, compose network
+# make load-report RUN=before LABEL="..."   summary.json (Locust CSV + server ops_metrics)
+# make load-bench                           metrics-recorder cost per request
+# make load-render                          docs/LOAD_TEST.md from every stored summary
+USERS ?= 500
+SPAWN ?= 100
+DURATION ?= 5m
+RUN ?= run
+LABEL ?= $(RUN)
+LOAD_DSN = postgresql://sentinel_dashboard:$(SENTINEL_DASHBOARD_DB_PASSWORD)@postgres:5432/sentinel
+load-bodies:
+	$(SANDBOX) $(DATA_RW) $(IMAGE) python scripts/make_load_bodies.py --file-type Win64 --week 53 --n 2000
+
+load-test:
+	$(SANDBOX_NET) --network=sentinel_default $(DATA_RW) -e HOME=/tmp $(IMAGE) sh -c \
+		"mkdir -p /data/loadtest/$(RUN) && locust -f loadtest/locustfile.py --headless \
+		-u $(USERS) -r $(SPAWN) -t $(DURATION) --host http://api:8000 \
+		--csv /data/loadtest/$(RUN)/locust --csv-full-history --only-summary --stop-timeout 10"
+
+load-report: export SENTINEL_DASHBOARD_DSN = $(LOAD_DSN)
+load-report:
+	@$(SANDBOX_NET) --network=sentinel_default $(DATA_RW) -e SENTINEL_DASHBOARD_DSN $(IMAGE) \
+		python scripts/load_report.py run --run /data/loadtest/$(RUN) --label "$(LABEL)" --users $(USERS)
+
+load-bench:
+	$(SANDBOX) $(DATA_RW) $(IMAGE) python scripts/load_report.py bench
+
+load-render:
+	$(SANDBOX) $(DATA_RO) $(DOCS_RW) $(IMAGE) python scripts/load_report.py render --out docs/LOAD_TEST.md
+
+# Where a /v1/score request spends its time (real production models, in-process, no DB).
+profile-api:
+	$(SANDBOX_NET) --network=sentinel_default $(DATA_RO) -e SENTINEL_MLFLOW_URI=http://mlflow:5000 \
+		-e MLFLOW_ENABLE_ARTIFACTS_PROGRESS_BAR=false -e GIT_PYTHON_REFRESH=quiet -e HOME=/tmp \
+		$(IMAGE) python scripts/profile_api.py --n 1000
+
+# With PostgreSQL stopped the API keeps answering; afterwards lineage writing resumes.
+db-outage-check:
+	bash scripts/db_outage_check.sh

@@ -28,6 +28,7 @@ from sentinel.config import (
     RING_ORDER,
     Settings,
     load_gate_policy,
+    load_monitoring_config,
     load_replay_config,
     load_rollout_config,
     load_serving_config,
@@ -39,27 +40,47 @@ from sentinel.rollout.controller import TERMINAL, Controller, RolloutError
 log = get_logger(__name__)
 
 
+RingsReading = tuple[str, dict[str, dict[str, str | None]]]  # (API worker id, serving)
+
+
 def kill_and_time(
     post: Callable[[], dict[str, Any]],
-    rings: Callable[[], dict[str, dict[str, str | None]]],
+    rings: Callable[[], RingsReading],
     production: dict[str, str],
     timeout: float,
     poll: float,
     clock: Callable[[], float] = time.monotonic,
     sleep: Callable[[float], None] = time.sleep,
+    workers: int = 1,
 ) -> dict[str, Any]:
     """Call the kill switch, then poll until every ring serves production for every file
-    type. Returns the seconds it took (the Stage 6 "< 60 s" check) and what was served."""
+    type. Returns the seconds it took (the Stage 6 "< 60 s" check) and what was served.
+
+    Stage 8: the API runs several worker processes and each GET /v1/rings is answered by one
+    of them (worker id in a response header). Only the worker that took the kill switch
+    reloads at once; the others on their next registry poll. "Restored" therefore needs the
+    latest reading of at least `workers` distinct workers, all on production."""
     t0 = clock()
     response = post()
+    latest: dict[str, dict[str, dict[str, str | None]]] = {}
     while True:
-        serving = rings()
-        ok = all(
-            serving.get(r, {}).get(ft) == v for r in RING_ORDER for ft, v in production.items()
+        worker, serving = rings()
+        latest[worker] = serving
+        ok = len(latest) >= workers and all(
+            s.get(r, {}).get(ft) == v
+            for s in latest.values()
+            for r in RING_ORDER
+            for ft, v in production.items()
         )
         elapsed = clock() - t0
         if ok or elapsed > timeout:
-            return {"restored": ok, "seconds": elapsed, "serving": serving, "response": response}
+            return {
+                "restored": ok,
+                "seconds": elapsed,
+                "workers_seen": len(latest),
+                "serving": serving,
+                "response": response,
+            }
         sleep(poll)
 
 
@@ -79,6 +100,7 @@ def main() -> None:  # pragma: no cover - drives the running stack (`make rollou
         MlflowRegistry,
         PostgresTransitionStore,
         load_canary_set,
+        ops_stats_since,
         timeline_markdown,
     )
 
@@ -150,8 +172,18 @@ def main() -> None:  # pragma: no cover - drives the running stack (`make rollou
             out: dict[str, Any] = r.json()
             return out
 
+        def read_rings() -> RingsReading:
+            r = api.get("/v1/rings")
+            r.raise_for_status()
+            return r.headers.get("X-Sentinel-Worker", "?"), r.json()
+
         res = kill_and_time(
-            post, lambda: api.get("/v1/rings").json(), production, args.timeout, 0.5
+            post,
+            read_rings,
+            production,
+            args.timeout,
+            0.5,
+            workers=load_serving_config().workers,
         )
         log.info("kill_switch_timed", **res)
         if not res["restored"]:
@@ -191,11 +223,15 @@ def main() -> None:  # pragma: no cover - drives the running stack (`make rollou
         )
         return
 
-    def fetch_stats() -> list[dict[str, Any]]:
-        r = api.get("/v1/ops/stats")
-        r.raise_for_status()
-        out: list[dict[str, Any]] = r.json()
-        return out
+    # Stage 8: health signals from ops_metrics (the rows the alert worker reads), counted
+    # from the moment the ring switched, instead of the API's in-memory totals.
+    mon = load_monitoring_config()
+    serving_name = load_serving_config().service_name
+
+    def fetch_stats(since: datetime) -> list[dict[str, Any]]:
+        return ops_stats_since(
+            os.environ["SENTINEL_ROLLOUT_DSN"], serving_name, since, mon.metrics.flush_seconds
+        )
 
     rings = load_replay_config().rings
     no_canaries = args.cmd == "start" and args.no_canaries

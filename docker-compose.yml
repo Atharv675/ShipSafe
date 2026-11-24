@@ -1,6 +1,7 @@
 # Sentinel Gate local stack: api, postgres, mlflow, jaeger (Stage 3); redpanda + live and
-# shadow consumers (Stage 4); the replay producer runs on demand (`make replay WEEKS=...`).
-# No Prometheus / Grafana: metrics go to PostgreSQL (Stage 8), traces to Jaeger, dashboards
+# shadow consumers (Stage 4); alert worker + Streamlit dashboard (Stage 8); the replay
+# producer runs on demand (`make replay WEEKS=...`).
+# No Prometheus / Grafana: metrics go to PostgreSQL ops_metrics, traces to Jaeger, dashboards
 # in Streamlit. Every port is published on 127.0.0.1 only. Secrets come from .env.
 #   make up      make down
 name: sentinel
@@ -37,6 +38,8 @@ services:
       SENTINEL_SHADOW_DB_PASSWORD: ${SENTINEL_SHADOW_DB_PASSWORD:?set SENTINEL_SHADOW_DB_PASSWORD in .env}
       SENTINEL_GATE_DB_PASSWORD: ${SENTINEL_GATE_DB_PASSWORD:?set SENTINEL_GATE_DB_PASSWORD in .env}
       SENTINEL_ROLLOUT_DB_PASSWORD: ${SENTINEL_ROLLOUT_DB_PASSWORD:?set SENTINEL_ROLLOUT_DB_PASSWORD in .env}
+      SENTINEL_MONITOR_DB_PASSWORD: ${SENTINEL_MONITOR_DB_PASSWORD:?set SENTINEL_MONITOR_DB_PASSWORD in .env}
+      SENTINEL_DASHBOARD_DB_PASSWORD: ${SENTINEL_DASHBOARD_DB_PASSWORD:?set SENTINEL_DASHBOARD_DB_PASSWORD in .env}
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -66,9 +69,8 @@ services:
 
   api:
     <<: *app
-    command: >
-      uvicorn --factory sentinel.serving.app:build_app
-      --host 0.0.0.0 --port 8000 --workers 1 --no-access-log
+    # Stage 8: uvicorn with `workers` processes from configs/serving.yaml (one GIL each)
+    command: python -m sentinel.serving.serve
     environment:
       <<: *app_env
       SENTINEL_MLFLOW_URI: http://mlflow:5000
@@ -92,11 +94,45 @@ services:
 
   jaeger:
     <<: *hardened
-    # Traces (wired into the api in Stage 8). UI: http://127.0.0.1:16686
+    # Traces: api + live consumer export OTLP/HTTP to :4318 (configs/monitoring.yaml).
+    # In-memory store (traces are lost on restart). UI: http://127.0.0.1:16686
     image: jaegertracing/jaeger:2.11.0@sha256:b585df1b6299bbbd16bf7c679da30389349736e4b6bc8f4f500142a75bf26ca8
     tmpfs: ["/tmp"]
     ports: ["127.0.0.1:16686:16686"]
     expose: ["4317", "4318"]
+    mem_limit: 1536m
+
+  alert-worker:
+    <<: *app
+    # Stage 8: consumer lag every 10 s, alert rules every 30 s, ops_metrics retention daily.
+    command: python -m sentinel.monitoring.worker
+    environment:
+      <<: *app_env
+      SENTINEL_MONITOR_DSN: postgresql://sentinel_monitor:${SENTINEL_MONITOR_DB_PASSWORD}@postgres:5432/sentinel
+    mem_limit: 512m
+    depends_on:
+      postgres: {condition: service_healthy}
+      redpanda: {condition: service_healthy}
+
+  dashboard:
+    <<: *app
+    # Stage 8 Streamlit app (Operations; Stage 9 adds ML pages), read-only DB role.
+    command: >
+      streamlit run /app/src/sentinel/dashboard/app.py
+      --server.address 0.0.0.0 --server.port 8501 --server.headless true
+      --server.fileWatcherType none --browser.gatherUsageStats false
+    environment:
+      <<: *app_env
+      SENTINEL_DASHBOARD_DSN: postgresql://sentinel_dashboard:${SENTINEL_DASHBOARD_DB_PASSWORD}@postgres:5432/sentinel
+    ports: ["127.0.0.1:8501:8501"]
+    mem_limit: 1g
+    depends_on:
+      postgres: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8501/_stcore/health', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
 
   redpanda:
     <<: *hardened

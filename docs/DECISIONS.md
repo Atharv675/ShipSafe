@@ -216,3 +216,72 @@ All of these were fixed before any experiment result existed. Nothing is tuned o
   - Scores: production's raw scores on the same windows, bins from the baseline window. An alert needs PSI above 0.10.
   - Thresholds are textbook rules of thumb, not fitted. Precision is judged on P1's candidates, where each candidate appears once against its predecessor.
 - **Leakage guard.** `check_no_test_week_leakage` refuses to run if v1 touched a week >= 53, or if a candidate's fit, threshold or calibration weeks pass its T. The gate and the harm judgement assert that they never evaluate a model on weeks it learned from.
+
+## Stage 8
+
+### Metrics in PostgreSQL (configs/monitoring.yaml)
+- **One recorder, two views.**
+  - `snapshot()` (since start) keeps serving GET /v1/ops/stats.
+  - `drain()` (since the last drain) feeds `ops_metrics` every 10 s, one row per active series.
+  - Rejected: a second recorder for the window, which would mean double bookkeeping on the request path.
+- **Bounded window.**
+  - At most 20,000 latency samples per series per window. Count and sum stay exact; extra samples are dropped and counted (`metrics_samples_dropped`).
+  - Rejected: a reservoir sample, which would make percentiles random for no gain at 500 req/s (5,000 per window).
+- **Database down = drop and count, never wait.**
+  - A failed write discards that window and adds `ops_metrics_dropped` to the next one.
+  - Rejected: retrying a window, which can only pile up behind an outage and would end up costing memory in the request process.
+- **Gauges** (consumer lag) are stored as one sample per window: `sum/count` is the value.
+- **Percentiles** are computed per 10-second window with numpy's method (`evaluate.latency_summary`).
+  - A longer period's p99 cannot be rebuilt from window summaries. Two places therefore use an explicit approximation:
+    - the rollout's health check uses the count-weighted mean of window p99s, the same estimator for candidate and production;
+    - retention keeps the max of the window p95/p99 (an upper bound, so spikes stay visible) and a count-weighted mean for p50.
+
+### Retention
+- A daily job in the alert worker, also run once at start. It moves 10-second rows older than a day into 1-minute rows in ONE statement (`DELETE ... RETURNING` feeding `INSERT`), whole minutes only, then deletes rows older than 14 days.
+- `ops_metrics` is operational data, not an audit table: only `sentinel_monitor` may delete from it.
+
+### Alerts (configs/alert_rules.yaml)
+- **"For N minutes"** means:
+  - the condition held in every 10-second bucket with data in the last N minutes;
+  - the data reaches back N minutes;
+  - the newest bucket is under 60 s old.
+
+  No recent data means not firing: an alert never stays up on stale numbers, and a quiet service resolves its latency alert.
+- **Error rate** is computed only on buckets with at least 20 requests. Below that, 1 error in 50 requests would page.
+- **Consumer lag "rising for 10 minutes"** requires a positive least-squares slope over the span AND in each of its five 2-minute segments.
+  - Found on the stack (2026-11-23): with one slope over the whole span, 6 flat minutes followed by a 4-minute climb fired after 4 minutes. Regression test added.
+- **Never-break hit** fires on any canary the model flags (before overrides). It resolves after 10 minutes without one. The API counts `never_break_hits`; the canaries' own traffic stays in `canary_*` metrics as before.
+- **Storage.**
+  - Only transitions are stored: append-only `alerts`, FIRING / RESOLVED.
+  - The database itself refuses a duplicate state or a first RESOLVED (trigger with a per-key advisory lock), so two workers cannot both page.
+  - The webhook is optional (empty URL = off); a webhook failure is logged and never blocks the record.
+- **Same signals for the rollout.**
+  - The Stage 6 controller now reads request, error and latency health from `ops_metrics`, counted from the moment the ring switched, instead of the API's in-memory totals since process start.
+  - Those totals were wrong after an API restart and mixed in traffic from before the ring changed.
+
+### Tracing
+- OpenTelemetry SDK, OTLP over HTTP to Jaeger all-in-one (no gRPC stack).
+  - The live consumer opens `consume` per event (retries included) and sends `traceparent`.
+  - The API continues it in `score`, with a `log` child for the lineage hand-off, and stores the trace id in `predictions.trace_id`.
+  - Without a configured endpoint the tracer is a no-op and `trace_id` is NULL.
+  - Export is batched with a bounded queue: dropped spans, never a blocked request.
+- The shadow consumer is not traced. Its scores never reach a caller, and its rows are already linked by `event_id`.
+
+### Dashboard
+- Streamlit with Altair (bundled), reading as `sentinel_dashboard` (SELECT only).
+- Every query has a name, so pages are tested with AppTest on canned frames. `make dashboard-check` renders them against the live database.
+- Short `st.cache_data` TTL (10 s), with the window end floored to it so reruns hit the cache.
+- Latency-spike rows (bucket p99 above the alert limit) link to the Jaeger search for that service and time window.
+
+### Serving under load (docs/LOAD_TEST.md)
+- **4 uvicorn worker processes** (`serving.yaml` `workers`). Scoring is CPU-bound Python: one process saturated at about 125 req/s under one GIL.
+  - Each worker loads its own models: 1.3 GB in total.
+  - Each worker writes its own `ops_metrics` rows. Readers aggregate them: counts summed, the worst worker's p99 for the chart and the alert.
+  - Rejected: one process with more threads. The GIL serialises them, which the profile showed.
+- **Registry poll 30 s -> 5 s.** The kill switch reaches one worker, which reloads at once; the others follow on their next poll. The kill CLI times "restored" only when every worker (`X-Sentinel-Worker` header on GET /v1/rings) reports production.
+  - Cost: about 0.4 core of MLflow load from alias polling.
+- **Request body.** Decoded and validated in one pass by pydantic's JSON validator. FastAPI's default (stdlib `json.loads` + object validation) cost about 4x the CPU on a 2,500-number body. Same 422 on a bad body.
+- **`httptools` + `uvloop`.** uvicorn's C HTTP parser and event loop; without them it falls back to pure-Python h11.
+- **Measured, not met.** The 500 req/s / p99 < 20 ms target was not reached on the shared 8-core laptop: 306 req/s, all requests answered, 0 errors.
+  - Owner decision 2026-11-24: record the measured numbers.
+  - Not done: sampling root-request traces, more workers.

@@ -410,7 +410,8 @@ def test_hot_reload_under_200_concurrent_requests_has_zero_errors(tmp_path: Path
 
 def test_serving_config_file_is_valid() -> None:
     cfg = load_serving_config()
-    assert cfg.poll_seconds == 30
+    assert cfg.poll_seconds == 5  # Stage 8: every API worker follows a kill switch within 5 s
+    assert cfg.workers == 4
     assert cfg.model_alias == "production"
     assert set(cfg.file_types) == {"Win64", "Win32"}
 

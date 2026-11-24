@@ -42,6 +42,7 @@ class PredictionRecord:
     reference_version: str | None = None
     reference_score: float | None = None
     reference_verdict: str | None = None
+    trace_id: str | None = None  # Stage 8: W3C trace id of the request's trace in Jaeger
 
 
 COLUMNS = tuple(PredictionRecord.__dataclass_fields__)

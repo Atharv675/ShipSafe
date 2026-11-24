@@ -224,10 +224,49 @@ SELECT
 """
 
 
+# Stage 8: the API's request/error/latency series since the ring switched, from the same
+# ops_metrics rows the alert worker reads. Latency per model version: count-weighted mean of
+# the 10-second p99s (the same estimator for candidate and production; a true p99 of the
+# period cannot be rebuilt from window summaries). Canary traffic has its own metric names.
+OPS_STATS_SQL = """
+SELECT metric, labels, sum(count)::bigint, sum(sum),
+       sum(p99 * count) FILTER (WHERE p99 IS NOT NULL)
+           / NULLIF(sum(count) FILTER (WHERE p99 IS NOT NULL), 0)
+FROM ops_metrics
+WHERE service = %(service)s AND metric IN ('requests', 'latency_ms')
+  AND ts_bucket >= %(since)s - %(bucket)s * interval '1 second'
+GROUP BY metric, labels
+"""
+
+
+def stats_from_ops_rows(rows: list[tuple[Any, ...]]) -> list[dict[str, Any]]:
+    """OPS_STATS_SQL rows -> the GET /v1/ops/stats shape `health_from_stats` reads."""
+    out = []
+    for metric, labels, count, total, p99 in rows:
+        lab = labels if isinstance(labels, dict) else json.loads(labels or "{}")
+        out.append(
+            {"metric": metric, "labels": lab, "count": int(count), "sum": float(total), "p99": p99}
+        )
+    return out
+
+
+def ops_stats_since(  # pragma: no cover - SQL, exercised by integration tests
+    dsn: str, service: str, since: datetime, bucket_seconds: float
+) -> list[dict[str, Any]]:
+    import psycopg
+
+    with psycopg.connect(dsn, connect_timeout=5) as conn:
+        rows = conn.execute(
+            OPS_STATS_SQL, {"service": service, "since": since, "bucket": bucket_seconds}
+        ).fetchall()
+    return stats_from_ops_rows(rows)
+
+
 def health_from_stats(
     stats: list[dict[str, Any]], candidate: str, production: str
 ) -> ServiceHealth:
-    """Candidate request/error counts and p99 latencies from GET /v1/ops/stats."""
+    """Candidate request/error counts and p99 latencies (ops_metrics since the ring switched,
+    or GET /v1/ops/stats)."""
     requests = errors = samples = 0
     p99: dict[str, float | None] = {candidate: None, production: None}
     for s in stats:
@@ -249,7 +288,7 @@ class LineageMeter:  # pragma: no cover - SQL + HTTP, exercised by the demo
         self,
         dsn: str,
         cfg: RolloutConfig,
-        fetch_stats: Callable[[], list[dict[str, Any]]],
+        fetch_stats: Callable[[datetime], list[dict[str, Any]]],
     ) -> None:
         self._dsn, self._cfg, self._fetch = dsn, cfg, fetch_stats
 
@@ -271,9 +310,11 @@ class LineageMeter:  # pragma: no cover - SQL + HTTP, exercised by the demo
         assert r is not None  # an aggregate always returns one row
         return RingTraffic(ring, *(int(v) for v in r))
 
-    def health(self, candidate_label: str, production_label: str) -> ServiceHealth | None:
+    def health(
+        self, candidate_label: str, production_label: str, since: datetime
+    ) -> ServiceHealth | None:
         try:
-            stats = self._fetch()
+            stats = self._fetch(since)
         except Exception as exc:
             log.warning("rollout_api_metrics_unavailable", error=type(exc).__name__)
             return None

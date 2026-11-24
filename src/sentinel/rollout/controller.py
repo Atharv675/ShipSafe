@@ -475,7 +475,12 @@ class Registry(Protocol):
 class Meter(Protocol):
     def traffic(self, current: Transition, rollout_start: Transition, ring: str) -> RingTraffic: ...
 
-    def health(self, candidate_label: str, production_label: str) -> ServiceHealth | None: ...
+    def health(
+        self, candidate_label: str, production_label: str, since: datetime
+    ) -> ServiceHealth | None:
+        """Request, error and latency figures of both models since `since` (the moment
+        the ring switched to the candidate); None if they cannot be read."""
+        ...
 
 
 class CanarySender(Protocol):
@@ -633,7 +638,7 @@ class Controller:
             exp = start.signals.get("expected_disagreement")
             signals = WatchSignals(
                 traffic,
-                self.meter.health(cur.candidate_label, cur.production_label),
+                self.meter.health(cur.candidate_label, cur.production_label, cur.ts),
                 ExpectedDisagreement.from_dict(exp)
                 if exp
                 else ExpectedDisagreement.must_agree("not recorded: must agree"),

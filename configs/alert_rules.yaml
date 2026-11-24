@@ -1,0 +1,51 @@
+# Stage 8 alert rules, evaluated by the alert worker on ops_metrics (src/sentinel/monitoring/alerts.py).
+# Only state changes are stored (append-only `alerts`, FIRING / RESOLVED, de-duplicated per
+# rule + labels). "for_seconds": the condition must hold in every 10-second bucket of that
+# span, the data must cover the whole span, and the newest data must be recent; otherwise the
+# alert does not fire (or resolves). Reasoning in docs/DECISIONS.md (Stage 8).
+
+evaluate_every_seconds: 30
+recent_seconds: 60          # the newest bucket must be at most this old to count as "now"
+webhook_url: ""             # optional: POST {rule, state, labels, value, message, ts} on every change
+webhook_timeout_seconds: 5
+
+rules:
+  - name: api_p99_latency
+    kind: threshold
+    severity: page
+    service: api
+    metric: latency_ms
+    field: p99
+    above: 20.0               # ms
+    for_seconds: 300
+    group_by: [model_version]
+
+  - name: api_error_rate
+    kind: ratio
+    severity: page
+    service: api
+    numerator: errors         # HTTP 5xx
+    denominator: requests     # every answered request
+    above: 0.01
+    for_seconds: 300
+    min_denominator: 20       # a bucket with fewer requests says nothing about the rate
+    group_by: [model_version]
+
+  - name: consumer_lag_rising
+    kind: rising
+    severity: ticket
+    service: consumers
+    metric: consumer_lag
+    for_seconds: 600
+    min_slope_per_minute: 1.0 # least-squares slope of the lag, events per minute, ...
+    segments: 5               # ...in EACH 2-minute fifth of the span (rising the whole time)
+    group_by: [group]
+
+  - name: never_break_hit
+    kind: count
+    severity: page
+    service: api
+    metric: never_break_hits  # a never-break canary flagged by the model (before overrides)
+    for_seconds: 0            # fires at once
+    lookback_seconds: 600     # resolves after this long without a new hit
+    group_by: [model_version]

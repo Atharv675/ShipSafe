@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     mlflow_uri: str | None = None  # default: SQLite registry under data_dir/mlflow
     pg_dsn: str | None = None  # PostgreSQL DSN for serving (secret: .env / compose only)
     admin_api_key: SecretStr | None = None  # Stage 6 kill switch; unset = endpoint disabled
+    otlp_endpoint: str | None = None  # Stage 8: overrides monitoring.yaml tracing.endpoint
 
     @property
     def mlflow_dir(self) -> Path:
@@ -294,6 +295,7 @@ class ServingConfig(_Frozen):
     model_alias: str
     poll_seconds: float = Field(gt=0)
     predict_threads: int = Field(ge=1)
+    workers: int = Field(ge=1)
     max_id_length: int = Field(gt=0)
     latency_samples: int = Field(gt=0)
     lineage: LineageConfig
@@ -497,3 +499,133 @@ def candidate_id(policy: str, as_of_week: int) -> str:
 
 def load_experiment_config(path: Path | None = None) -> ExperimentConfig:
     return ExperimentConfig.model_validate(load_yaml(path or CONFIG_DIR / "experiment.yaml"))
+
+
+# ------------------------------------------------------------------ Stage 8: observability
+
+
+class OpsMetricsConfig(_Frozen):
+    flush_seconds: float = Field(gt=0)
+    window_max_samples: int = Field(gt=0)
+
+
+class ConsumerLagConfig(_Frozen):
+    interval_seconds: float = Field(gt=0)
+    timeout_seconds: float = Field(gt=0)
+    service: str = Field(min_length=1)
+
+
+class RetentionConfig(_Frozen):
+    run_every_hours: float = Field(gt=0)
+    downsample_after_hours: float = Field(gt=0)
+    downsample_bucket_seconds: int = Field(gt=0)
+    delete_after_days: float = Field(gt=0)
+
+    @model_validator(mode="after")
+    def _order(self) -> RetentionConfig:
+        if self.delete_after_days * 24 <= self.downsample_after_hours:
+            raise ValueError("rows must be downsampled before they are deleted")
+        return self
+
+
+class TracingConfig(_Frozen):
+    endpoint: str  # empty = tracing off
+    sample_ratio: float = Field(ge=0, le=1)
+    export_batch_size: int = Field(gt=0)
+    export_queue_size: int = Field(gt=0)
+    jaeger_ui_url: str = Field(min_length=1)
+    api_service_name: str = Field(min_length=1)
+    live_consumer_service_name: str = Field(min_length=1)
+
+
+class DashboardConfig(_Frozen):
+    cache_ttl_seconds: float = Field(gt=0)
+    default_lookback_minutes: int = Field(gt=0)
+    max_lookback_minutes: int = Field(gt=0)
+    top_tenants: int = Field(gt=0)
+    spike_link_margin_seconds: float = Field(ge=0)
+
+
+class MonitoringConfig(_Frozen):
+    metrics: OpsMetricsConfig
+    consumer_lag: ConsumerLagConfig
+    retention: RetentionConfig
+    tracing: TracingConfig
+    dashboard: DashboardConfig
+
+
+class _Rule(_Frozen):
+    name: str = Field(min_length=1)
+    severity: str = Field(min_length=1)
+    service: str = Field(min_length=1)
+    for_seconds: float = Field(ge=0)
+    group_by: list[str] = Field(default_factory=list)
+
+
+class ThresholdRule(_Rule):
+    """A latency-style field (p50/p95/p99) above a limit in every bucket for `for_seconds`."""
+
+    kind: Literal["threshold"]
+    metric: str = Field(min_length=1)
+    field: Literal["p50", "p95", "p99"]
+    above: float
+
+
+class RatioRule(_Rule):
+    """count(numerator) / count(denominator) per bucket above a limit for `for_seconds`."""
+
+    kind: Literal["ratio"]
+    numerator: str = Field(min_length=1)
+    denominator: str = Field(min_length=1)
+    above: float = Field(ge=0, lt=1)
+    min_denominator: int = Field(ge=1)
+
+
+class RisingRule(_Rule):
+    """A gauge whose least-squares slope over `for_seconds` is above a minimum."""
+
+    kind: Literal["rising"]
+    metric: str = Field(min_length=1)
+    min_slope_per_minute: float = Field(gt=0)
+    segments: int = Field(ge=1)  # the slope must clear the limit in each of these sub-spans
+
+
+class CountRule(_Rule):
+    """Any count of `metric` within `lookback_seconds` fires at once."""
+
+    kind: Literal["count"]
+    metric: str = Field(min_length=1)
+    lookback_seconds: float = Field(gt=0)
+
+
+AlertRule = ThresholdRule | RatioRule | RisingRule | CountRule
+
+
+class AlertRulesConfig(_Frozen):
+    evaluate_every_seconds: float = Field(gt=0)
+    recent_seconds: float = Field(gt=0)
+    webhook_url: str = ""
+    webhook_timeout_seconds: float = Field(gt=0)
+    rules: list[Annotated[AlertRule, Field(discriminator="kind")]] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _unique(self) -> AlertRulesConfig:
+        names = [r.name for r in self.rules]
+        if len(names) != len(set(names)):
+            raise ValueError("alert rule names must be unique")
+        return self
+
+    def lookback_seconds(self) -> float:
+        """How far back the worker must read ops_metrics to evaluate every rule."""
+        spans = [
+            r.lookback_seconds if isinstance(r, CountRule) else r.for_seconds for r in self.rules
+        ]
+        return max(spans) + self.recent_seconds
+
+
+def load_monitoring_config(path: Path | None = None) -> MonitoringConfig:
+    return MonitoringConfig.model_validate(load_yaml(path or CONFIG_DIR / "monitoring.yaml"))
+
+
+def load_alert_rules(path: Path | None = None) -> AlertRulesConfig:
+    return AlertRulesConfig.model_validate(load_yaml(path or CONFIG_DIR / "alert_rules.yaml"))

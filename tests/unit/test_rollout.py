@@ -155,7 +155,9 @@ class Meter:
     def traffic(self, current: Transition, rollout_start: Transition, ring: str) -> RingTraffic:
         return self.by_ring[ring]
 
-    def health(self, candidate_label: str, production_label: str) -> ServiceHealth | None:
+    def health(
+        self, candidate_label: str, production_label: str, since: datetime
+    ) -> ServiceHealth | None:
         return self._health
 
 
@@ -655,7 +657,7 @@ def test_kill_and_time_polls_until_rings_serve_production() -> None:
     )
     res = kill_and_time(
         lambda: {"ok": True},
-        lambda: next(states),
+        lambda: ("w1", next(states)),
         {"Win64": "1"},
         timeout=60,
         poll=0.5,
@@ -665,7 +667,7 @@ def test_kill_and_time_polls_until_rings_serve_production() -> None:
     assert res["restored"] and res["seconds"] == 1.0
     stuck = kill_and_time(
         lambda: {},
-        lambda: {"ring0": {"Win64": "7"}},
+        lambda: ("w1", {"ring0": {"Win64": "7"}}),
         {"Win64": "1"},
         timeout=2,
         poll=0.5,
@@ -673,6 +675,48 @@ def test_kill_and_time_polls_until_rings_serve_production() -> None:
         sleep=lambda _: None,
     )
     assert not stuck["restored"]
+
+
+def test_kill_and_time_waits_for_every_api_worker() -> None:
+    """Stage 8: several API workers. The one that took the kill switch is restored at once;
+    another still serves the candidate until its next poll. One good reading is not enough."""
+    good = {r: {"Win64": "1"} for r in ("ring0", "ring1", "ring2")}
+    bad = {**good, "ring0": {"Win64": "7"}}
+    clock = iter(np.arange(0.0, 100.0, 0.5))
+    readings = iter([("a", good), ("a", good), ("b", bad), ("a", good), ("b", good)])
+    res = kill_and_time(
+        lambda: {"ok": True},
+        lambda: next(readings),
+        {"Win64": "1"},
+        timeout=60,
+        poll=0.5,
+        clock=lambda: float(next(clock)),
+        sleep=lambda _: None,
+        workers=2,
+    )
+    # readings at t = 0.5 .. 2.5 s: restored only at the 5th, when worker b reports production
+    assert res["restored"] and res["workers_seen"] == 2 and res["seconds"] == 2.5
+
+
+def test_rings_endpoint_names_the_answering_worker() -> None:
+    import os
+
+    reg = Registry()
+    reg.add(loaded("Win64", "1", seed=1), "production")
+    reg.add(loaded("Win32", "1", seed=2), "production")
+    router = _router(reg)
+    router.refresh()
+    app = create_app(
+        router,
+        InMemoryOverrideStore(),
+        InMemorySink(),
+        MetricsRecorder("api", 10),
+        serving_cfg(),
+        background=False,
+    )
+    with TestClient(app) as c:
+        r = c.get("/v1/rings")
+    assert r.headers["X-Sentinel-Worker"] == str(os.getpid())
 
 
 # ------------------------------------------------------------------ demo models (real MLflow)

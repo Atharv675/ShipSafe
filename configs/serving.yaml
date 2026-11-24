@@ -2,8 +2,12 @@
 service_name: api
 file_types: [Win64, Win32]     # one registered model per type; requests routed by feature_schema_version
 model_alias: production        # the ONLY thing serving trusts: whatever this alias points to
-poll_seconds: 30               # registry poll interval for hot reload
+poll_seconds: 5                 # registry poll interval for hot reload (Stage 8: 30 -> 5, so every
+                               # worker follows a kill switch within seconds, not only the one hit)
 predict_threads: 1             # LightGBM threads per request (one row: more threads only add overhead)
+# Stage 8: API worker processes (one GIL each). Load test: 1 worker saturates at ~125 req/s
+# (docs/LOAD_TEST.md). Each worker loads its own models (~390 MB with both types).
+workers: 4
 max_id_length: 256             # file_id / tenant_id length limit
 latency_samples: 10000         # per-series latency reservoir in the in-process metrics recorder
 

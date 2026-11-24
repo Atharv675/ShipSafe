@@ -20,13 +20,19 @@ from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Protocol, cast
 
+from opentelemetry import trace
+from opentelemetry.trace import SpanKind, StatusCode
+
 from sentinel.config import LiveConsumerConfig
 from sentinel.logging import get_logger
+from sentinel.monitoring.tracing import headers_for_current_span
 from sentinel.replay.events import FileEvent
 
 log = get_logger(__name__)
 
-PostFn = Callable[[dict[str, Any]], int]  # returns the HTTP status; raises on transport errors
+# (body, headers) -> HTTP status; raises on transport errors. Headers carry `traceparent`.
+PostFn = Callable[[dict[str, Any], dict[str, str]], int]
+tracer = trace.get_tracer("sentinel.live_consumer")
 
 
 class Message(Protocol):
@@ -58,25 +64,37 @@ def score_with_retry(
     stop: threading.Event,
     sleep: Callable[[float], bool] | None = None,
 ) -> str:
-    """'ok' | 'rejected:<status>' | 'stopped'. Retries 5xx/transport errors until success."""
+    """'ok' | 'rejected:<status>' | 'stopped'. Retries 5xx/transport errors until success.
+    Stage 8: one `consume` span per event (retries included); the API's `score` span joins
+    it through the `traceparent` header."""
     wait = sleep or stop.wait
     backoff = cfg.retry_backoff_seconds
     body = request_body(ev)
-    while not stop.is_set():
-        try:
-            status = post(body)
-        except Exception as exc:
-            log.warning("live_score_retry", event_id=ev.event_id, error=type(exc).__name__)
-            status = -1
-        if status == 200:
-            return "ok"
-        if 400 <= status < 500:
-            log.error("live_score_rejected", event_id=ev.event_id, status=status)
-            return f"rejected:{status}"
-        if wait(backoff):
-            break
-        backoff = min(backoff * 2, cfg.max_backoff_seconds)
-    return "stopped"
+    with tracer.start_as_current_span(
+        "consume",
+        kind=SpanKind.CONSUMER,
+        attributes={"sentinel.event_id": ev.event_id, "sentinel.file_id": ev.file_id},
+    ) as span:
+        headers = headers_for_current_span()
+        attempts = 0
+        while not stop.is_set():
+            attempts += 1
+            try:
+                status = post(body, headers)
+            except Exception as exc:
+                log.warning("live_score_retry", event_id=ev.event_id, error=type(exc).__name__)
+                status = -1
+            span.set_attribute("sentinel.attempts", attempts)
+            if status == 200:
+                return "ok"
+            if 400 <= status < 500:
+                log.error("live_score_rejected", event_id=ev.event_id, status=status)
+                span.set_status(StatusCode.ERROR, f"rejected {status}")
+                return f"rejected:{status}"
+            if wait(backoff):
+                break
+            backoff = min(backoff * 2, cfg.max_backoff_seconds)
+        return "stopped"
 
 
 def run_live(
@@ -120,12 +138,15 @@ def main() -> None:  # pragma: no cover - runs in the live-consumer container
     import httpx
     from confluent_kafka import Consumer
 
-    from sentinel.config import Settings, load_replay_config
+    from sentinel.config import Settings, load_monitoring_config, load_replay_config
     from sentinel.logging import configure_logging
+    from sentinel.monitoring.tracing import setup_tracing
 
     settings = Settings()
     configure_logging(settings.log_level)
     cfg = load_replay_config()
+    tracing = load_monitoring_config().tracing
+    setup_tracing(tracing.live_consumer_service_name, tracing, settings.otlp_endpoint)
     stop = threading.Event()
     signal.signal(signal.SIGTERM, lambda *_: stop.set())
     signal.signal(signal.SIGINT, lambda *_: stop.set())
@@ -144,8 +165,8 @@ def main() -> None:  # pragma: no cover - runs in the live-consumer container
         limits=httpx.Limits(max_connections=cfg.live.workers),
     )
 
-    def post(body: dict[str, Any]) -> int:
-        return client.post("/v1/score", json=body).status_code
+    def post(body: dict[str, Any], headers: dict[str, str]) -> int:
+        return client.post("/v1/score", json=body, headers=headers).status_code
 
     log.info("live_consumer_started", group=cfg.live.group_id, topic=cfg.topic)
     t0 = time.time()

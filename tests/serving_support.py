@@ -91,6 +91,7 @@ def serving_cfg(**over: object) -> ServingConfig:
         "model_alias": "production",
         "poll_seconds": 30.0,
         "predict_threads": 1,
+        "workers": 1,
         "max_id_length": 64,
         "latency_samples": 1000,
         "lineage": LineageConfig(batch_size=50, flush_seconds=0.05, queue_max=1000, max_retries=1),

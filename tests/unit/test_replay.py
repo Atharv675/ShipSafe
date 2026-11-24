@@ -217,7 +217,7 @@ def test_live_retries_server_errors_until_success_and_never_skips() -> None:
     statuses = iter([503, -2, 500, 200])
     calls: list[dict[str, Any]] = []
 
-    def post(body: dict[str, Any]) -> int:
+    def post(body: dict[str, Any], headers: dict[str, str]) -> int:
         calls.append(body)
         s = next(statuses)
         if s == -2:
@@ -235,7 +235,7 @@ def test_live_retries_server_errors_until_success_and_never_skips() -> None:
 def test_live_does_not_retry_permanent_rejections() -> None:
     calls = []
 
-    def post(body: dict[str, Any]) -> int:
+    def post(body: dict[str, Any], headers: dict[str, str]) -> int:
         calls.append(1)
         return 409
 
@@ -249,7 +249,7 @@ def test_live_commits_only_after_the_whole_batch_is_answered() -> None:
     seen: list[str] = []
     lock = threading.Lock()
 
-    def post(body: dict[str, Any]) -> int:
+    def post(body: dict[str, Any], headers: dict[str, str]) -> int:
         with lock:
             seen.append(body["event_id"])
         return 200
@@ -264,7 +264,7 @@ def test_live_stop_during_retry_leaves_batch_uncommitted() -> None:
     consumer = FakeConsumer([_event(i).encode() for i in range(3)])
     stop = threading.Event()
 
-    def post(body: dict[str, Any]) -> int:
+    def post(body: dict[str, Any], headers: dict[str, str]) -> int:
         stop.set()  # shut down while the API is failing
         return 503
 
@@ -403,7 +403,7 @@ def test_consumers_survive_broker_only_errors_before_the_topic_exists() -> None:
     errors = [Msg(None, err="UNKNOWN_TOPIC_OR_PART")]
     live = StrictConsumer([])
     live.pending = list(errors)
-    totals = run_live(live, lambda b: 200, LIVE, threading.Event(), max_batches=1)
+    totals = run_live(live, lambda b, h: 200, LIVE, threading.Event(), max_batches=1)
     assert totals["broker_error"] == 1
     models, _ = _candidate_manager()
     shadow = StrictConsumer([])
