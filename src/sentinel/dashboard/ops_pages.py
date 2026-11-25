@@ -8,6 +8,7 @@ tooltip and a table view ("data" expander). Colours come from dashboard/theme.py
 
 from __future__ import annotations
 
+import zlib
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -20,6 +21,7 @@ import streamlit as st
 from sentinel.config import AlertRulesConfig, MonitoringConfig, ThresholdRule
 from sentinel.dashboard import data as d
 from sentinel.dashboard import theme as th
+from sentinel.dashboard import ui
 
 SCORE_BINS = 20
 OPS_METRICS = [
@@ -84,22 +86,31 @@ def _timeseries(
     markers: pd.DataFrame | None = None,
     area: bool = False,
     log: bool = False,
+    x_type: str = "T",
+    y_zero: bool = True,
+    points: bool = False,
 ) -> alt.LayerChart:
     """Line (or stacked area) over time with a hover crosshair and tooltip, an optional
     limit line (status colour, labelled) and optional event markers (model reloads).
     `log`: symmetric-log y scale, so one large spike does not flatten the normal range."""
     base = alt.Chart(df)
     enc: dict[str, Any] = {
-        "x": alt.X(f"{x}:T", title=None),
+        "x": alt.X(f"{x}:{x_type}", title=None if x_type == "T" else x),
         "y": alt.Y(
             f"{y}:Q",
             title=f"{y_title} (log scale)" if log else y_title,
             axis=alt.Axis(format=y_format),
             stack="zero" if area else None,
-            scale=alt.Scale(type="symlog") if log else alt.Undefined,
+            scale=alt.Scale(type="symlog")
+            if log
+            else (alt.Undefined if y_zero else alt.Scale(zero=False)),
         ),
     }
-    tooltip: list[Any] = [alt.Tooltip(f"{x}:T", title="time (UTC)", format="%H:%M:%S")]
+    tooltip: list[Any] = [
+        alt.Tooltip(f"{x}:T", title="time (UTC)", format="%H:%M:%S")
+        if x_type == "T"
+        else alt.Tooltip(f"{x}:{x_type}")
+    ]
     if color:
         scale = (
             alt.Scale(domain=list(domain), range=list(domain.values())) if domain else alt.Undefined
@@ -110,13 +121,19 @@ def _timeseries(
         enc["strokeDash"] = alt.StrokeDash(f"{dash}:N", title=None)
         tooltip.append(alt.Tooltip(f"{dash}:N"))
     tooltip.append(alt.Tooltip(f"{y}:Q", format=y_format, title=y_title))
-    mark = base.mark_area(line={"strokeWidth": 2}) if area else base.mark_line()
+    mark = (
+        base.mark_area(line={"strokeWidth": 2})
+        if area
+        else base.mark_line(point=alt.OverlayMarkDef(size=36, filled=True) if points else False)
+    )
     lines = mark.encode(**enc)
     hover = alt.selection_point(fields=[x], nearest=True, on="pointerover", empty=False)
     rule = (
         base.mark_rule(color=th.MUTED, strokeWidth=1)
         .encode(
-            x=f"{x}:T", opacity=alt.condition(hover, alt.value(0.8), alt.value(0)), tooltip=tooltip
+            x=f"{x}:{x_type}",
+            opacity=alt.condition(hover, alt.value(0.8), alt.value(0)),
+            tooltip=tooltip,
         )
         .add_params(hover)
     )
@@ -179,18 +196,24 @@ def _card(
     *,
     higher_is_bad: bool = True,
     chart: str = "line",
+    accent: str = "blue",
+    caption: str = "",
 ) -> None:
-    st.metric(
-        label,
-        "n/a" if k.value is None else fmt(k.value),
-        # no change -> no delta badge (a red "up 0.00%" reads as a problem)
-        delta=None if not k.delta else fmt(k.delta),
-        delta_color="inverse" if higher_is_bad else "normal",
-        help=help,
-        border=True,
-        chart_data=k.trend or None,
-        chart_type=chart,  # type: ignore[arg-type]
-    )
+    # keyed container: the redesign's thin accent line (ui.CSS, one rule per accent)
+    with st.container(key=f"kpi-{accent}-{zlib.crc32(label.encode('utf-8'))}", border=True):
+        st.metric(
+            label,
+            "n/a" if k.value is None else fmt(k.value),
+            # no change -> no delta badge (a red "up 0.00%" reads as a problem)
+            delta=None if not k.delta else fmt(k.delta),
+            delta_color="inverse" if higher_is_bad else "normal",
+            help=help,
+            border=False,
+            chart_data=k.trend or None,
+            chart_type=chart,  # type: ignore[arg-type]
+        )
+        if caption:
+            st.caption(caption)
 
 
 def _banner(state: str, detail: str) -> None:
@@ -253,9 +276,18 @@ def _golden_kpis(ctx: Context, series: pd.DataFrame, lag: pd.DataFrame) -> None:
             "Answered requests per second (latest 10-second bucket).",
             higher_is_bad=False,
             chart="area",
+            accent="blue",
+            caption="answered requests per second",
         )
     with c[1]:
-        _card("Errors", er, lambda v: f"{100 * v:.2f}%", "HTTP 5xx share of answered requests.")
+        _card(
+            "Errors",
+            er,
+            lambda v: f"{100 * v:.2f}%",
+            "HTTP 5xx share of answered requests.",
+            accent="orange",
+            caption="HTTP 5xx share of requests",
+        )
     with c[2]:
         limit = _p99_limit(ctx.rules)
         _card(
@@ -265,6 +297,8 @@ def _golden_kpis(ctx: Context, series: pd.DataFrame, lag: pd.DataFrame) -> None:
             f"Worst worker's handler p99 per bucket; alert above {limit:g} ms for 5 min."
             if limit
             else "Handler p99 per bucket.",
+            accent="yellow",
+            caption=f"alert above {limit:g} ms" if limit else "handler p99",
         )
     with c[3]:
         _card(
@@ -272,6 +306,8 @@ def _golden_kpis(ctx: Context, series: pd.DataFrame, lag: pd.DataFrame) -> None:
             lg,
             lambda v: f"{v:,.0f}",
             "Events published but not yet scored by the live consumer.",
+            accent="aqua",
+            caption="events waiting to be scored",
         )
 
 
@@ -292,6 +328,55 @@ def overview(ctx: Context) -> None:
     series = _ops(ctx, OPS_METRICS)
     lag = _lag(ctx)
     _golden_kpis(ctx, series, lag)
+
+    canary = {"canary": f"{ctx.canary_prefix}%"}
+    flags = ctx.src.query("flag_rate", d.FLAG_RATE_SQL, {**canary, **ctx.window.params()})
+    tenants = ctx.src.query(
+        "override_rate",
+        d.OVERRIDE_RATE_SQL,
+        {**canary, "top": ctx.mon.dashboard.top_tenants, **ctx.window.params()},
+    )
+    left, right = st.columns([3, 2], gap="medium")
+    with (
+        left,
+        ui.card(
+            "Traffic and verdict timeline",
+            "Files scored and files the model flagged, one point per minute across the window",
+        ),
+    ):
+        tl = d.verdict_timeline(flags)
+        if tl.empty:
+            _empty("scored files")
+        else:
+            _show(
+                _timeseries(
+                    tl,
+                    "files",
+                    "files per minute",
+                    color="series",
+                    x="minute",
+                    y_format=",.0f",
+                    domain={"scored": th.SERIES[0], "flagged": th.SERIES[1]},
+                    area=False,
+                ),
+                "Real traffic only (canary tenants excluded). A flagged share that jumps while "
+                "traffic is flat is the first thing to look at after a rollout step.",
+                tl,
+                "ov-verdicts",
+                height=220,
+            )
+    with right, ui.card("Verdict mix", "How the model treated every file in this window"):
+        mix = d.verdict_mix(flags, tenants)
+        total = int(mix["files"].sum()) if len(mix) else 0
+        ui.donut(
+            mix,
+            "verdict",
+            "files",
+            {"not flagged": th.SERIES[2], "flagged": th.SERIES[1], "overridden": th.SERIES[3]},
+            f"{total:,}",
+            "files",
+            key="ov-mix",
+        )
 
     left, right = st.columns([3, 2], gap="medium")
     with left, st.container(border=True):
@@ -351,6 +436,41 @@ def overview(ctx: Context) -> None:
             last = ro.sort_values("ts").groupby("file_type").tail(1)
             for r in last.itertuples():
                 st.markdown(f"**{r.file_type}** · `{r.to_state}` · {str(r.reason)[:90]}")
+
+    left, right = st.columns(2, gap="medium")
+    with left, ui.card("Flag rate by ring", "Share of each ring's files the model flagged"):
+        rings = d.ring_flag_rates(flags)
+        if rings.empty:
+            _empty("scored files")
+        else:
+            ui.progress_rows(
+                [
+                    ui.Progress(
+                        f"{r['ring']} · {int(r['events']):,} files",
+                        float(r["flag_rate"]),
+                        th.RING_COLORS.get(str(r["ring"]), th.MUTED),
+                        f"{100 * r['flag_rate']:.1f}%",
+                    )
+                    for r in rings.to_dict("records")
+                ]
+            )
+            st.caption("Rings should look alike; a candidate ring drifting away is a warning.")
+    with right, ui.card("Busiest tenants", "Ranked by files scored; overrides on the right"):
+        top = d.tenant_shares(tenants, 6)
+        if top.empty:
+            _empty("tenants")
+        else:
+            ui.progress_rows(
+                [
+                    ui.Progress(
+                        str(r["tenant_id"]),
+                        float(r["share"]),
+                        th.SERIES[i % len(th.SERIES)],
+                        f"{int(r['events']):,} · {int(r['overridden'])} overridden",
+                    )
+                    for i, r in enumerate(top.to_dict("records"))
+                ]
+            )
 
     with st.container(border=True):
         st.subheader("Recent alerts", divider="gray")

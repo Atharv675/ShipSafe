@@ -195,10 +195,19 @@ def outcome(j: Judged, margin: float) -> Outcome:
 
 
 def clean_pool(ctx: Ctx, model: str, decision_week: int) -> npt.NDArray[np.float64]:
-    """Benign scores of the newest `clean_pool_weeks` labelled weeks at `decision_week`."""
+    """Benign scores of the newest `clean_pool_weeks` labelled weeks at `decision_week`,
+    leaving out weeks the model was fitted on: its scores on its own training files are far
+    too low (v1 at week 52 sees only weeks 43-46, all inside its fit window 1-47, where the
+    top benign score is ~7e-5) and would drag the cut-off to near zero. Empty pool -> the
+    cut-off stays where it is."""
     newest = ctx.cfg.labelled_upto(decision_week)
-    weeks = range(newest - ctx.cfg.recalibration.clean_pool_weeks + 1, newest + 1)
-    idx = ctx.rows(list(weeks))
+    fitted = set(ctx.st.models[model].fit_weeks)
+    weeks = [
+        w
+        for w in range(newest - ctx.cfg.recalibration.clean_pool_weeks + 1, newest + 1)
+        if w not in fitted
+    ]
+    idx = ctx.rows(weeks)
     idx = idx[ctx.st.y[idx] == 0]
     return np.asarray(ctx.st.raw[model][idx], dtype=np.float64)
 
@@ -526,14 +535,20 @@ def rejudge(
     margin: float,
 ) -> pd.DataFrame:
     """1d: re-judge Stage 7's original harmful promotions (its own candidates and chain)
-    with the new definition (loss > M and family-clustered CI excluding 0)."""
+    with the new definition (loss > M and family-clustered CI excluding 0). The same swap
+    shipped by several release policies is one row, listing the policies."""
     ctx = Ctx(st, cfg, gate, cluster_keys(st, meta), "family" if meta is not None else "file")
     rows = []
-    for r in original.itertuples():
+    key = ["candidate", "production", "deploy_week"]
+    shipped_by: dict[tuple[str, str, int], set[str]] = {}
+    for c, p, w, rp in original[[*key, "release_policy"]].itertuples(index=False):
+        shipped_by.setdefault((str(c), str(p), int(w)), set()).add(str(rp))
+    for r in original.drop_duplicates(key).itertuples():
         j = judge(ctx, str(r.candidate), str(r.production), int(cast(Any, r.deploy_week)))
+        policies = shipped_by[(str(r.candidate), str(r.production), int(cast(Any, r.deploy_week)))]
         rows.append(
             {
-                "release_policy": r.release_policy,
+                "release_policy": ",".join(sorted(policies)),
                 "candidate": r.candidate,
                 "production": r.production,
                 "deploy_week": int(cast(Any, r.deploy_week)),

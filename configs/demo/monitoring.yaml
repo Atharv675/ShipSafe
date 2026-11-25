@@ -1,0 +1,6 @@
+# DEMO overlay: the demo stack's UIs are on their own ports (scripts/demo.sh).
+tracing:
+  jaeger_ui_url: http://127.0.0.1:16687
+dashboard:
+  ml:
+    mlflow_ui_url: http://127.0.0.1:15000

@@ -1,0 +1,3 @@
+# DEMO overlay: the ML pages' operating point matches the demo gate (PDF is too small for 0.1%).
+file_type: PDF
+operating_fpr: 0.01

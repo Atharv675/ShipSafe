@@ -295,3 +295,36 @@ All of these were fixed before any experiment result existed. Nothing is tuned o
   - Status colours never carry a series.
 - **Gaps are shown, never bridged.** Counts fall to 0 where there were no events; ratios and latency break the line, because unknown is not zero.
 - **Latency uses a symmetric-log y scale.** It is labelled "(log scale)" so the normal range stays readable next to multi-second spikes.
+
+## Stage 7b (backtest, Pass 1)
+- **The recalibration pool leaves out the model's own fit weeks.** With 6-week labels, v1's first pools (weeks 43-47) are training data, where benign scores are biased low (top ~7e-5); using them drove the cut-off to near zero. Rejected alternative: keep the pool as is and rely on the 0.05 pp cap, which does not help, because the cap is measured on the same biased pool.
+- **Table 1d re-judges promotions only, one row per swap.** Stage 7 flags rejected candidates as counterfactually harmful; they never shipped. Rejected alternative: one row per (policy, swap), which counts the same model change twice.
+- **M is kept as pre-registered (2.76) even though a trend drives it.** Changing the margin after seeing the results would be tuning on judged weeks. The effect of using M = X is stated as an assumption in BACKTEST.md instead.
+
+## Stage 7b (backtest, Pass 2)
+- **P4 thresholds and the walk-forward grid were fixed in config before running.** Rejected alternative: choosing them after seeing outcomes (tuning on the judged weeks).
+- **The must-catch zero tolerance was kept even though it blocked 15 of 18 decisions.** The owner fixed it before the run; relaxing it after seeing results would be post-hoc. It is reported as the reason P4 shipped nothing.
+- **P4 evidence excludes either model's training weeks.** This is the same bias as the Pass 1 recalibration-pool bug. Rejected alternative: using them, which inflates v1's recall at T = 52-54.
+- **Walk-forward tuning is point-in-time** (a candidate's 4 outcome weeks must be labelled before it can tune a decision). Rejected alternative: the brief's naive "1..k then k+1", which would use labels that do not exist yet under the 6-week rule.
+- **Stage 3 uses a Bonferroni always-valid CI** (6 looks) on the existing family bootstrap. Rejected alternative: SPRT, which needs a parametric recall model this code does not have.
+
+## Stage 9 (ML dashboard)
+- **Head-to-head and Drift read `results/ml_scores.parquet` / `ml_psi.parquet` (`make ml-results`).** Labels never reach PostgreSQL, and the plan allows only PostgreSQL, MLflow and results. Rejected alternative: loading labels into the database.
+- **Head-to-head compares only on weeks after both models' as-of week.** Neither model is scored on data it learned from.
+- **The Drift heatmap's PSI reference is v1's last 4 training weeks (44-47)**, a fixed reference so columns are comparable. Alert markers come from Stage 7's unchanged sliding rule.
+- **The dashboard role may now SELECT `shadow_predictions`** (012), for the lineage lookup. It is still read-only.
+- **Registry and 7-day aggregates are cached for 60 s; everything else for 10 s.** Rejected alternative: a materialized view, which would need write access.
+- **Gate outcomes are labelled by outcome ("Rejected"), not system status ("Critical").** A rejection is the gate working.
+
+## Dashboard redesign 2 (2026-11-25, owner reference images)
+- **The owner's references set the visual language:**
+  - near-black page with darker cards and hairline borders;
+  - KPI cards with an accent line and sparkline;
+  - donuts with the total in the centre and counted legends;
+  - progress rows, chips, "stage" cards with metric boxes, and grouped bars.
+
+  Customised to the project: the ML Overview is the **release path** (production → candidate → gate → rollout → backtest verdict).
+- **The palette grew from 4 to 8 categorical slots** (dataviz dark slots 1-8). They were re-validated on the new card surface `#121214`: all checks pass, worst adjacent CVD ΔE 8.4. Every multi-series view names its series (legend or label), because 8.4 sits in the floor band where secondary encoding is required. Status colours are still used only for state, always with a label.
+- **Native Streamlit parts plus a small HTML/CSS kit (`dashboard/ui.py`).** Rejected alternative: a custom front-end, which would break the AppTest suite and the read-only, single-container deployment. Metrics, subheaders and dataframes stay native, so tests and `dashboard-check` read the same structure.
+- **Sidebar sections Observe / Intelligence / Enforce / Operate**, as in the references, replacing Operations / ML.
+- **Bar charts start at zero, even where the differences are small.** Near-identical recalls should look near-identical; that is the backtest's finding.

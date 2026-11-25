@@ -491,3 +491,60 @@ def clip_spans(df: pd.DataFrame, start_col: str, end_col: str, window: Window) -
     out[start_col] = s[keep].where(s[keep] >= lo, lo)
     out[end_col] = e[keep].where(e[keep] <= hi, hi)
     return out.reset_index(drop=True)
+
+
+# ---------------------------------------------------------------------------- redesign (2026-11-25)
+
+
+def verdict_timeline(flags: pd.DataFrame) -> pd.DataFrame:
+    """Long format per minute: files scored and files flagged (all rings and versions)."""
+    cols = ["minute", "series", "files"]
+    if flags.empty:
+        return pd.DataFrame(columns=cols)
+    g = flags.groupby("minute", as_index=False)[["events", "model_flags"]].sum()
+    long = g.melt(
+        id_vars="minute",
+        value_vars=["events", "model_flags"],
+        var_name="series",
+        value_name="files",
+    )
+    long["series"] = long["series"].map({"events": "scored", "model_flags": "flagged"})
+    return long[cols].sort_values(["series", "minute"], ignore_index=True)
+
+
+def verdict_mix(flags: pd.DataFrame, tenants: pd.DataFrame) -> pd.DataFrame:
+    """Files by outcome in the window: not flagged / flagged by the model / overridden by a
+    tenant allow-or-block rule (overrides counted over the tenants listed)."""
+    scored = int(flags["events"].sum()) if len(flags) else 0
+    flagged = int(flags["model_flags"].sum()) if len(flags) else 0
+    overridden = int(tenants["overridden"].sum()) if len(tenants) else 0
+    rows = [
+        ("not flagged", max(0, scored - flagged)),
+        ("flagged", flagged),
+        ("overridden", overridden),
+    ]
+    return pd.DataFrame(rows, columns=["verdict", "files"])
+
+
+def ring_flag_rates(flags: pd.DataFrame) -> pd.DataFrame:
+    cols = ["ring", "events", "model_flags", "flag_rate"]
+    if flags.empty:
+        return pd.DataFrame(columns=cols)
+    g = (
+        flags.assign(ring=flags["ring"].fillna("none"))
+        .groupby("ring", as_index=False)[["events", "model_flags"]]
+        .sum()
+    )
+    g = g[g["events"] > 0]
+    g["flag_rate"] = g["model_flags"] / g["events"]
+    return g[cols].sort_values("ring", ignore_index=True)
+
+
+def tenant_shares(tenants: pd.DataFrame, top: int) -> pd.DataFrame:
+    """The busiest tenants; `share` = events relative to the busiest (bar length)."""
+    cols = ["tenant_id", "events", "overridden", "share"]
+    if tenants.empty:
+        return pd.DataFrame(columns=cols)
+    t = tenants.sort_values("events", ascending=False).head(top).copy()
+    t["share"] = t["events"] / max(1, int(t["events"].max()))
+    return t[cols].reset_index(drop=True)

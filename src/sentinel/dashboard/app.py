@@ -16,13 +16,27 @@ import pandas as pd
 import streamlit as st
 
 from sentinel.config import (
+    Settings,
     load_alert_rules,
+    load_gate_policy,
     load_monitoring_config,
     load_rollout_config,
     load_serving_config,
 )
 from sentinel.dashboard import data as d
-from sentinel.dashboard import theme
+from sentinel.dashboard import ml_data as m
+from sentinel.dashboard import theme, ui
+from sentinel.dashboard.ml_pages import (
+    MLContext,
+    drift_page,
+    experiment_results,
+    gate_viewer,
+    head_to_head_page,
+    ml_overview,
+    model_registry,
+    prediction_lookup,
+    rollout_timeline,
+)
 from sentinel.dashboard.ops_pages import (
     Context,
     alerts_page,
@@ -72,14 +86,31 @@ def _page(fn: Callable[[Context], None], ctx: Context) -> Callable[[], None]:
     return run
 
 
-def main(source: d.Source | None = None, now: datetime | None = None) -> None:
+ALL = "all"
+
+
+def _ml_page(fn: Callable[[MLContext], None], ctx: MLContext) -> Callable[[], None]:
+    def run() -> None:
+        fn(ctx)
+
+    run.__name__ = fn.__name__
+    return run
+
+
+def main(
+    source: d.Source | None = None,
+    now: datetime | None = None,
+    registry: m.Registry | None = None,
+    results: m.Results | None = None,
+) -> None:
     st.set_page_config(
-        page_title="Sentinel Gate · Operations",
+        page_title="Sentinel Gate",
         page_icon=":material/shield:",
         layout="wide",
         initial_sidebar_state="expanded",
     )
     theme.register()
+    ui.inject_css()
     mon = load_monitoring_config()
     rules = load_alert_rules()
     if source is None:
@@ -108,18 +139,66 @@ def main(source: d.Source | None = None, now: datetime | None = None) -> None:
         st.caption(
             f"[Jaeger traces]({mon.tracing.jaeger_ui_url}) · metrics: PostgreSQL ops_metrics"
         )
+    rollout = load_rollout_config()
     ctx = Context(
         src=source,
         window=d.Window.last(allowed[choice], at, mon.dashboard.cache_ttl_seconds),
         mon=mon,
         rules=rules,
         api_service=load_serving_config().service_name,
-        canary_prefix=load_rollout_config().canaries.tenant_prefix,
+        canary_prefix=rollout.canaries.tenant_prefix,
         now=at,
     )
+    # Stage 9: filters shared by the ML pages (values seen in the selected time window)
+    opts = m.filter_options(
+        source.query(
+            "filter_values",
+            m.FILTER_VALUES_SQL,
+            {
+                **ctx.window.params(),
+                "canary": f"{ctx.canary_prefix}%",
+                "top": mon.dashboard.ml.lookup_limit,
+            },
+        )
+    )
+    with st.sidebar:
+        st.markdown("**ML filters**")
+        picks = {
+            k: st.selectbox(label, [ALL, *opts[k]], key=f"filter-{k}")
+            for k, label in (("model", "Model version"), ("ring", "Ring"), ("tenant", "Tenant"))
+        }
+    if registry is None:
+        registry = m.MlflowRegistry(os.environ.get("SENTINEL_MLFLOW_URI", "http://mlflow:5000"))
+    if results is None:
+        results = m.ResultsDir(Settings().results_dir)
+    ml_ctx = MLContext(
+        ops=ctx,
+        registry=registry,
+        results=results,
+        cfg=mon.dashboard.ml,
+        filters=m.Filters(**{k: (None if v == ALL else v) for k, v in picks.items()}),
+        ring_aliases={str(k): v for k, v in rollout.ring_aliases.items()},
+        fallback_alias=rollout.fallback_alias,
+        operating_fpr=load_gate_policy().operating_fpr,
+    )
+    ml_pages = [
+        (ml_overview, "ML Overview", "ml-overview", ":material/insights:"),
+        (model_registry, "Model Registry", "model-registry", ":material/inventory_2:"),
+        (gate_viewer, "Gate Decisions", "gate-decisions", ":material/gavel:"),
+        (head_to_head_page, "Head-to-head", "head-to-head", ":material/compare_arrows:"),
+        (drift_page, "Drift", "drift", ":material/ssid_chart:"),
+        (rollout_timeline, "Rollout Timeline", "rollout-timeline", ":material/timeline:"),
+        (experiment_results, "Experiment Results", "experiment-results", ":material/science:"),
+        (prediction_lookup, "Prediction Lookup", "prediction-lookup", ":material/search:"),
+    ]
+    ml = {
+        path: st.Page(_ml_page(fn, ml_ctx), title=title, url_path=path, icon=icon)
+        for fn, title, path, icon in ml_pages
+    }
+    # 2026-11-25 redesign: sections by what the operator is doing (owner references)
     nav = st.navigation(
         {
-            "Operations": [
+            "Observe": [
                 st.Page(
                     _page(overview, ctx),
                     title="Overview",
@@ -145,9 +224,21 @@ def main(source: d.Source | None = None, now: datetime | None = None) -> None:
                     url_path="alerts",
                     icon=":material/notifications_active:",
                 ),
-            ]
+            ],
+            "Intelligence": [
+                ml["ml-overview"],
+                ml["model-registry"],
+                ml["head-to-head"],
+                ml["drift"],
+                ml["experiment-results"],
+            ],
+            "Enforce": [ml["gate-decisions"], ml["rollout-timeline"]],
+            "Operate": [ml["prediction-lookup"]],
         }
     )
+    with st.sidebar:
+        st.divider()
+        ui.live_indicator(f"Streaming · refreshed {at:%H:%M:%S} UTC")
     nav.run()
 
 

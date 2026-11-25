@@ -1,0 +1,3 @@
+# DEMO overlay: the demo stack serves only the PDF model; 2 API workers are plenty.
+file_types: [PDF]
+workers: 2

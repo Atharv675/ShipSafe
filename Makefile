@@ -16,8 +16,11 @@ HARDEN = --rm --init --read-only \
 	--pids-limit=256 --memory=6g --memory-swap=6g --cpus=4 \
 	--user 10001:10001 \
 	"--mount=type=bind,source=$(SRC),target=/work,readonly"
-SANDBOX     = docker run $(HARDEN) --network=none
-SANDBOX_NET = docker run $(HARDEN)
+# Stage 10: OVERLAY=demo applies configs/demo/ (see src/sentinel/config.py load_yaml)
+OVERLAY ?=
+OVERLAY_ENV = $(if $(OVERLAY),-e SENTINEL_CONFIG_OVERLAY=$(OVERLAY))
+SANDBOX     = docker run $(HARDEN) $(OVERLAY_ENV) --network=none
+SANDBOX_NET = docker run $(HARDEN) $(OVERLAY_ENV)
 DATA_RO = "--mount=type=bind,source=$(DATA_DIR),target=/data,readonly"
 DATA_RW = "--mount=type=bind,source=$(DATA_DIR),target=/data"
 DOCS_RW = "--mount=type=bind,source=$(SRC)/docs,target=/work/docs"
@@ -28,7 +31,8 @@ DOCS_RW = "--mount=type=bind,source=$(SRC)/docs,target=/work/docs"
 	gate-verify rollout-init demo-models rollout rollout-watch rollout-status kill-switch demo-reset \
 	rollout-timeline experiment-import experiment v1-zip dashboard dashboard-check demo \
 	load-bodies load-test load-report load-bench load-render profile-api db-outage-check \
-	backtest-import-meta backtest-import backtest-pass1
+	backtest-import-meta backtest-import backtest-pass1 backtest-pass2 ml-results demo-down demo-rollout \
+	secrets-scan
 
 help:
 	@echo Targets: setup lint test test-integration data download inspect report clean-data cleaning-report bundle lock sandbox train gate up down sample-request dashboard demo
@@ -119,21 +123,26 @@ train-smoke:
 FILE_TYPE ?= Win64
 CANDIDATE ?=
 GATE_WEEKS ?=
+GATE_OUT ?=
 gate: export SENTINEL_GATE_DSN = postgresql://sentinel_gate:$(SENTINEL_GATE_DB_PASSWORD)@postgres:5432/sentinel
 gate:
 	@test -n "$(CANDIDATE)" || (echo "usage: make gate CANDIDATE=<registered version>" && exit 1)
-	$(SANDBOX_NET) --network=sentinel_default -e SENTINEL_GATE_DSN -e GIT_PYTHON_REFRESH=quiet \
-		$(DATA_RW) $(DOCS_RW) $(IMAGE) python -m sentinel.gate.run --candidate $(CANDIDATE) \
-		--file-type $(FILE_TYPE) $(if $(GATE_WEEKS),--weeks $(GATE_WEEKS))
+	$(SANDBOX_NET) --network=$(NET) -e SENTINEL_GATE_DSN -e GIT_PYTHON_REFRESH=quiet \
+		$(DATA_RW) $(if $(GATE_OUT),,$(DOCS_RW)) $(IMAGE) python -m sentinel.gate.run \
+		--candidate $(CANDIDATE) --file-type $(FILE_TYPE) $(if $(GATE_WEEKS),--weeks $(GATE_WEEKS)) \
+		$(if $(GATE_OUT),--out $(GATE_OUT))
 
 # Re-hash every stored gate decision and compare with docs/gate/*.json (tamper check).
 gate-verify: export SENTINEL_GATE_DSN = postgresql://sentinel_gate:$(SENTINEL_GATE_DB_PASSWORD)@postgres:5432/sentinel
 gate-verify:
-	$(SANDBOX_NET) --network=sentinel_default -e SENTINEL_GATE_DSN $(IMAGE) \
+	$(SANDBOX_NET) --network=$(NET) -e SENTINEL_GATE_DSN $(IMAGE) \
 		python -m sentinel.gate.run verify
 
 # Stage 3: local stack (api, postgres, mlflow, jaeger), hardened, ports on 127.0.0.1 only.
-COMPOSE = docker compose
+# Stage 10: PROJECT=sentinel-demo runs a second, isolated stack (own volumes, network, ports)
+PROJECT ?= sentinel
+NET = $(PROJECT)_default
+COMPOSE = docker compose -p $(PROJECT)
 APP_IMAGE ?= sentinel-app:dev
 up:
 	docker build -f docker/sandbox.Dockerfile --target app -t $(APP_IMAGE) .
@@ -159,7 +168,7 @@ test-integration: export SENTINEL_IT_ROLLOUT_DSN = postgresql://sentinel_rollout
 test-integration: export SENTINEL_IT_MONITOR_DSN = postgresql://sentinel_monitor:$(SENTINEL_MONITOR_DB_PASSWORD)@postgres:5432/sentinel
 test-integration: export SENTINEL_IT_DASHBOARD_DSN = postgresql://sentinel_dashboard:$(SENTINEL_DASHBOARD_DB_PASSWORD)@postgres:5432/sentinel
 test-integration:
-	$(SANDBOX_NET) --network=sentinel_default -e GIT_PYTHON_REFRESH=quiet \
+	$(SANDBOX_NET) --network=$(NET) -e GIT_PYTHON_REFRESH=quiet \
 		-e SENTINEL_API_URL=http://api:8000 -e SENTINEL_IT_ADMIN_DSN -e SENTINEL_IT_API_DSN \
 		-e SENTINEL_IT_GATE_DSN -e SENTINEL_IT_ROLLOUT_DSN -e SENTINEL_IT_MONITOR_DSN \
 		-e SENTINEL_IT_DASHBOARD_DSN \
@@ -174,11 +183,21 @@ dashboard:
 MINUTES ?= 15
 dashboard-check: export SENTINEL_DASHBOARD_DSN = postgresql://sentinel_dashboard:$(SENTINEL_DASHBOARD_DB_PASSWORD)@postgres:5432/sentinel
 dashboard-check:
-	@$(SANDBOX_NET) --network=sentinel_default -e SENTINEL_DASHBOARD_DSN -e HOME=/tmp $(IMAGE) \
-		python scripts/dashboard_check.py --minutes $(MINUTES)
+	@$(SANDBOX_NET) --network=$(NET) -e SENTINEL_DASHBOARD_DSN -e HOME=/tmp \
+		-e SENTINEL_MLFLOW_URI=http://mlflow:5000 -e GIT_PYTHON_REFRESH=quiet $(DATA_RO) $(IMAGE) \
+		python scripts/dashboard_check.py --minutes $(MINUTES) $(if $(LOOKUP),--lookup $(LOOKUP))
 
+# Stage 10: the whole release path on PDF in an isolated stack (project sentinel-demo, data in
+# $(SENTINEL_DATA_DIR)/demo, configs/demo overlay, ports 15432/15000/18081/16687/8502).
 demo:
-	@echo "demo: implemented in Stage 10" && exit 1
+	bash scripts/demo.sh
+
+# After `make demo`: a ring rollout of a deliberately BAD demo model, with live traffic.
+demo-rollout:
+	bash scripts/demo.sh rollout
+
+demo-down:
+	docker compose -p sentinel-demo down -v --remove-orphans
 
 # ---------------------------------------------------------------- Stage 4: replay + shadow
 # Apply the idempotent Stage 4 schema + shadow role to an existing database.
@@ -197,6 +216,8 @@ migrate:
 	$(COMPOSE) exec -T postgres psql -v ON_ERROR_STOP=1 -U sentinel_admin -d sentinel \
 		-f /docker-entrypoint-initdb.d/010_stage8.sql
 	$(COMPOSE) exec -T postgres sh /docker-entrypoint-initdb.d/011_monitor_roles.sh
+	$(COMPOSE) exec -T postgres psql -v ON_ERROR_STOP=1 -U sentinel_admin -d sentinel \
+		-f /docker-entrypoint-initdb.d/012_stage9.sql
 
 # Verify + install a Kaggle replay export (test weeks + never-break set).
 ZIP ?=
@@ -222,7 +243,7 @@ replay:
 ARGS ?= snapshot --weeks 53 54
 replay-counts: export SENTINEL_IT_ADMIN_DSN = postgresql://sentinel_admin:$(SENTINEL_PG_ADMIN_PASSWORD)@postgres:5432/sentinel
 replay-counts:
-	@$(SANDBOX_NET) --network=sentinel_default -e SENTINEL_IT_ADMIN_DSN $(DATA_RO) $(IMAGE) \
+	@$(SANDBOX_NET) --network=$(NET) -e SENTINEL_IT_ADMIN_DSN $(DATA_RO) $(IMAGE) \
 		python scripts/replay_counts.py $(ARGS) --file-type $(FILE_TYPE)
 
 # The three Stage 4 checks end to end (2-week replay, kill shadow mid-run, replay twice).
@@ -232,7 +253,7 @@ replay-check:
 # ---------------------------------------------------------------- Stage 6: ring rollout
 # The controller runs in the sandbox on the compose network as `sentinel_rollout`; it moves
 # registry aliases through the MLflow server and reads the API's metrics.
-ROLLOUT_RUN = $(SANDBOX_NET) --network=sentinel_default -e SENTINEL_ROLLOUT_DSN \
+ROLLOUT_RUN = $(SANDBOX_NET) --network=$(NET) -e SENTINEL_ROLLOUT_DSN \
 	-e SENTINEL_MLFLOW_URI=http://mlflow:5000 -e MLFLOW_ENABLE_ARTIFACTS_PROGRESS_BAR=false \
 	-e GIT_PYTHON_REFRESH=quiet -e HOME=/tmp $(DATA_RO)
 ROLLOUT_DSN = postgresql://sentinel_rollout:$(SENTINEL_ROLLOUT_DB_PASSWORD)@postgres:5432/sentinel
@@ -322,14 +343,14 @@ load-bodies:
 	$(SANDBOX) $(DATA_RW) $(IMAGE) python scripts/make_load_bodies.py --file-type Win64 --week 53 --n 2000
 
 load-test:
-	$(SANDBOX_NET) --network=sentinel_default $(DATA_RW) -e HOME=/tmp $(IMAGE) sh -c \
+	$(SANDBOX_NET) --network=$(NET) $(DATA_RW) -e HOME=/tmp $(IMAGE) sh -c \
 		"mkdir -p /data/loadtest/$(RUN) && locust -f loadtest/locustfile.py --headless \
 		-u $(USERS) -r $(SPAWN) -t $(DURATION) --host http://api:8000 \
 		--csv /data/loadtest/$(RUN)/locust --csv-full-history --only-summary --stop-timeout 10"
 
 load-report: export SENTINEL_DASHBOARD_DSN = $(LOAD_DSN)
 load-report:
-	@$(SANDBOX_NET) --network=sentinel_default $(DATA_RW) -e SENTINEL_DASHBOARD_DSN $(IMAGE) \
+	@$(SANDBOX_NET) --network=$(NET) $(DATA_RW) -e SENTINEL_DASHBOARD_DSN $(IMAGE) \
 		python scripts/load_report.py run --run /data/loadtest/$(RUN) --label "$(LABEL)" --users $(USERS)
 
 load-bench:
@@ -340,7 +361,7 @@ load-render:
 
 # Where a /v1/score request spends its time (real production models, in-process, no DB).
 profile-api:
-	$(SANDBOX_NET) --network=sentinel_default $(DATA_RO) -e SENTINEL_MLFLOW_URI=http://mlflow:5000 \
+	$(SANDBOX_NET) --network=$(NET) $(DATA_RO) -e SENTINEL_MLFLOW_URI=http://mlflow:5000 \
 		-e MLFLOW_ENABLE_ARTIFACTS_PROGRESS_BAR=false -e GIT_PYTHON_REFRESH=quiet -e HOME=/tmp \
 		$(IMAGE) python scripts/profile_api.py --n 1000
 
@@ -366,3 +387,22 @@ backtest-import:
 backtest-pass1:
 	$(SANDBOX) $(DATA_RW) $(DOCS_RW) -e GIT_PYTHON_REFRESH=quiet -e HOME=/tmp $(IMAGE) \
 		python scripts/run_backtest.py pass1 $(if $(RESAMPLES),--resamples $(RESAMPLES))
+
+# Pass 2 (P4, walk-forward, training window, drift, blend); needs Pass 1's outputs.
+backtest-pass2:
+	$(SANDBOX) $(DATA_RW) $(DOCS_RW) -e GIT_PYTHON_REFRESH=quiet -e HOME=/tmp $(IMAGE) \
+		python scripts/run_backtest.py pass2 $(if $(RESAMPLES),--resamples $(RESAMPLES))
+
+# ---------------------------------------------------------------- Stage 9: ML dashboard
+# Results the ML pages read (scores + labels + feature PSI from the Stage 7b exports).
+ml-results:
+	$(SANDBOX) $(DATA_RW) -e GIT_PYTHON_REFRESH=quiet -e HOME=/tmp $(IMAGE) \
+		python scripts/build_ml_results.py
+
+# Stage 10: scan the working folder for secrets (pinned gitleaks image, read-only, no network;
+# .env and the other git-ignored paths are allowlisted in .gitleaks.toml).
+GITLEAKS_IMAGE ?= zricethezav/gitleaks:v8.21.2
+secrets-scan:
+	docker run --rm --read-only --cap-drop=ALL --security-opt=no-new-privileges --network=none \
+		--user 10001:10001 "--mount=type=bind,source=$(SRC),target=/repo,readonly" \
+		$(GITLEAKS_IMAGE) dir /repo --config /repo/.gitleaks.toml --redact --no-banner -v

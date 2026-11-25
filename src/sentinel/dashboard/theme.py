@@ -16,17 +16,29 @@ from typing import Any, Literal, cast
 import altair as alt
 
 # --- surfaces and ink (dark) ---------------------------------------------------------------
-PAGE = "#0d0d0d"
-SURFACE = "#1a1a19"
+PAGE = "#09090b"  # 2026-11-25 redesign: near-black page, darker cards (owner references)
+SURFACE = "#121214"  # all 8 slots re-validated on this surface (dataviz validator)
 INK = "#f0efec"
 INK_2 = "#c3c2b7"
 MUTED = "#898781"
-GRID = "#2c2c2a"
-AXIS = "#383835"
+GRID = "#1f1f23"
+BORDER = "#232327"
+AXIS = "#2e2e33"
 FONT = 'system-ui, -apple-system, "Segoe UI", sans-serif'
 
 # --- categorical (identity), dark steps, fixed order ----------------------------------------
-SERIES = ["#3987e5", "#d95926", "#199e70", "#c98500"]  # blue, orange, aqua, yellow
+# blue, orange, aqua, yellow, magenta, green, violet, red (dataviz dark slots 1-8; worst
+# adjacent CVD dE 8.4, normal-vision floor 19.3 on #121214: secondary encoding = labels)
+SERIES = [
+    "#3987e5",
+    "#d95926",
+    "#199e70",
+    "#c98500",
+    "#d55181",
+    "#0ca30c",
+    "#9085e9",
+    "#e66767",
+]
 # stable identity for things that recur on several charts (colour follows the entity)
 RING_COLORS = {"ring0": SERIES[0], "ring1": SERIES[1], "ring2": SERIES[2], "none": MUTED}
 
@@ -84,7 +96,7 @@ def _theme() -> dict[str, Any]:
     }
     return {
         "config": {
-            "background": SURFACE,
+            "background": "transparent",  # charts sit on the card surface (redesign)
             "font": FONT,
             "padding": {"left": 8, "right": 12, "top": 12, "bottom": 8},
             "view": {"stroke": None},

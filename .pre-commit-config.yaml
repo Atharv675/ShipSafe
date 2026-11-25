@@ -17,3 +17,8 @@ repos:
         language: system
         pass_filenames: false
         types: [python]
+  # Stage 10: block commits that contain secrets (scans the staged changes).
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks

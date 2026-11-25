@@ -1,0 +1,5 @@
+# DEMO overlay: PDF has ~500 benign files per test week, too few for 0.1% FPR (Stage 0).
+# The demo gate compares recall at 1% FPR; the real policy is unchanged (0.1%).
+policy_version: "1.0.0-demo"
+file_types: [PDF]
+operating_fpr: 0.01

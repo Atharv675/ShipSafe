@@ -33,3 +33,28 @@ p4:                           # Pass 2 only; fixed now so nothing is tuned on re
   top_signers: 10             # N (EMBER2024 has no signer identity: see DECISIONS.md)
   min_early_agreement: 0.90   # A
   min_clean_files_warn: 50000
+  # ---- fixed 2026-11-25, BEFORE Pass 2 was run (owner answers of 2026-11-25) ----
+  # signer slice substitute (owner): malware recall per signature status
+  signer_slices: [unsigned, self_signed, signed]
+  eval_weeks: 4               # day-0 evidence: newest 4 labelled weeks (<= t-6), minus the
+                              # weeks either model was fitted on (same data for both models)
+  confidence: 0.95            # Wilson bounds of the directional disagreement checks
+  never_break_allowed: 0      # 500 benign must-not-flag files
+  must_catch_files: 500       # owner: per decision, malware from the evidence weeks that
+  must_catch_missed_allowed: 0  # production flags at its matched cut-off (seeded sample)
+  min_slice_files: 30         # a slice with fewer malware files is reported n/a (no block)
+  early_flip_rate: 0.05       # stage 2 primary (SIMULATED early labels); 0.10 = sensitivity
+  sequential_looks: 6         # stage 3: weeks 1..6 after deployment as their labels arrive
+  sequential_alpha: 0.05      # always-valid by Bonferroni: each look at 1 - alpha/looks
+  priority_label_weeks: 1     # step 5: disagreement files labelled within 1 week (assumed)
+  walk_forward:               # step 6 grid (tuned only on candidates whose 4 outcome weeks
+    margin_points: [0.5, 1.0, 2.0, 3.0]   # are labelled by the decision being tuned for)
+    confidence: [0.90, 0.95, 0.99]
+    eval_weeks: [2, 3, 4]
+    flag_rate_tolerance: [0.05, 0.10, 0.20]
+
+blend:                        # step 9 (owner): 0.5 * production + 0.5 * candidate raw scores
+  weight_candidate: 0.5
+
+drift_recalibration:          # step 8: alerts from configs/experiment.yaml `drift` (Stage 7,
+  on_alert_max_fpr_move_pp: .inf  # unchanged); on an alert the cut-off jumps to 0.1% FPR

@@ -1,0 +1,19 @@
+# Stage 10: secret scanning (gitleaks). Default rules, plus the paths git never sees:
+# .gitignore keeps .env (real secrets), data/ and dist/ out of the repo, so a scan of the
+# working folder (`make secrets-scan`, paths reported as /repo/...) skips them. The pre-commit
+# hook scans only the staged changes.
+title = "sentinel-gate"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "git-ignored local files (never committed)"
+paths = [
+  '''^(/repo/)?\.env$''',
+  '''(^|/)\.git/''',
+  '''^(/repo/)?data/''',
+  '''^(/repo/)?dist/''',
+  '''(^|/)__pycache__/''',
+  '''^(/repo/)?\.(mypy|ruff|pytest)_cache/''',
+]

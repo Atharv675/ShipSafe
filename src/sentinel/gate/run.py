@@ -332,7 +332,7 @@ def main() -> None:  # pragma: no cover - exercised by `make gate` against the r
         reason=bundle["reason"],
         bundle_sha256=sha,
         approved_alias=policy.approved_alias if bundle["decision"] == "PROMOTE" else None,
-        report=f"docs/gate/{did}.md",
+        report=str(args.out / f"{did}.md"),
     )
 
 

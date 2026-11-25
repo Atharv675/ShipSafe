@@ -255,6 +255,19 @@ def test_recalibration_pulls_the_shipped_fpr_back_toward_target() -> None:
     )
 
 
+def test_recalibration_pool_never_uses_the_models_training_weeks() -> None:
+    st, meta = synthetic()
+    ctx = p1.Ctx(st, CFG, GATE, p1.cluster_keys(st, meta), "family")
+    # decision at week 52 sees weeks 43-46 only: all inside v1's fit window (1-47)
+    assert p1.clean_pool(ctx, V1_ID, 52).size == 0
+    assert p1.next_cutoff(ctx, V1_ID, 0.77, 52) == 0.77  # nothing to learn from: unchanged
+    # week 55: newest labelled 49 -> pool 46-49 minus fit weeks = 48, 49 (benign only)
+    pool = p1.clean_pool(ctx, V1_ID, 55)
+    assert pool.size == 2 * PER_CLASS  # 2 weeks x PER_CLASS benign files
+    benign_48_49 = ctx.rows([48, 49])[st.y[ctx.rows([48, 49])] == 0]
+    assert np.array_equal(pool, st.raw[V1_ID][benign_48_49])
+
+
 def test_mean_recall_has_a_family_bootstrap_interval(result: dict[str, Any]) -> None:
     ci = result["mean_recall_ci"]
     assert result["cluster_level"] == "family"

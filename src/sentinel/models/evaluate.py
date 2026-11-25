@@ -156,6 +156,62 @@ def auprc(y: ArrayLike, scores: ArrayLike) -> float:
     return float(np.sum(np.diff(np.r_[0.0, recall]) * precision))
 
 
+@dataclass(frozen=True)
+class CurvePoints:
+    """A curve as parallel arrays (one point per distinct score, thinned to `max_points`)."""
+
+    x: npt.NDArray[np.float64]
+    y: npt.NDArray[np.float64]
+    threshold: npt.NDArray[np.float64]
+
+
+def _thin(n: int, max_points: int) -> npt.NDArray[np.int64]:
+    if n <= max_points:
+        return np.arange(n, dtype=np.int64)
+    return np.unique(np.linspace(0, n - 1, max_points).round().astype(np.int64))
+
+
+def _cumulative(
+    y: ArrayLike, scores: ArrayLike
+) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], int, int]:
+    """(tp, fp, threshold) after each distinct score, highest first (flag = score >= it)."""
+    yy, ss = _arrays(y, scores)
+    n1, n0 = int((yy == 1).sum()), int((yy == 0).sum())
+    order = np.argsort(-ss, kind="mergesort")
+    s_sorted, y_sorted = ss[order], yy[order]
+    last = np.r_[np.flatnonzero(np.diff(s_sorted)), s_sorted.size - 1]
+    tp = np.cumsum(y_sorted)[last].astype(np.float64)
+    fp = (last + 1 - tp).astype(np.float64)
+    return tp, fp, s_sorted[last].astype(np.float64), n1, n0
+
+
+def roc_points(
+    y: ArrayLike, scores: ArrayLike, max_fpr: float = 1.0, max_points: int = 400
+) -> CurvePoints:
+    """ROC curve (x = FPR, y = recall) from (0, 0), cut at `max_fpr` (the zoomed operating
+    region; the last point is the first one at or beyond it, so the line reaches the edge)."""
+    tp, fp, thr, n1, n0 = _cumulative(y, scores)
+    if n1 == 0 or n0 == 0:
+        raise ValueError("ROC needs both classes")
+    fpr, tpr = fp / n0, tp / n1
+    keep = int(np.searchsorted(fpr, max_fpr, side="left")) + 1
+    fpr, tpr, thr = fpr[:keep], tpr[:keep], thr[:keep]
+    i = _thin(fpr.size, max_points)
+    return CurvePoints(
+        np.r_[0.0, fpr[i]], np.r_[0.0, tpr[i]], np.r_[np.inf, thr[i]].astype(np.float64)
+    )
+
+
+def pr_points(y: ArrayLike, scores: ArrayLike, max_points: int = 400) -> CurvePoints:
+    """Precision-recall curve (x = recall, y = precision), one point per distinct score."""
+    tp, fp, thr, n1, _ = _cumulative(y, scores)
+    if n1 == 0:
+        raise ValueError("PR curve needs at least one malicious file")
+    recall, precision = tp / n1, tp / (tp + fp)
+    i = _thin(recall.size, max_points)
+    return CurvePoints(recall[i], precision[i], thr[i])
+
+
 # ---------------------------------------------------------------------------- calibration
 
 

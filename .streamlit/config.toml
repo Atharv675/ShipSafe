@@ -1,14 +1,14 @@
-# Streamlit app theme (Stage 8 dashboard redesign). Same values as
-# src/sentinel/dashboard/theme.py (dark surfaces from the validated dataviz palette).
+# Streamlit app theme. Same values as src/sentinel/dashboard/theme.py (2026-11-25 redesign:
+# near-black page, #121214 cards; palette validated on that surface).
 [theme]
 base = "dark"
 primaryColor = "#3987e5"
-backgroundColor = "#0d0d0d"
-secondaryBackgroundColor = "#1a1a19"
+backgroundColor = "#09090b"
+secondaryBackgroundColor = "#121214"
 textColor = "#f0efec"
 font = "sans serif"
 baseRadius = "medium"
-borderColor = "#2c2c2a"
+borderColor = "#232327"
 showWidgetBorder = true
 
 [server]

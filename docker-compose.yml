@@ -21,6 +21,7 @@ x-app: &app
   environment: &app_env
     SENTINEL_DATA_DIR: /data
     SENTINEL_LOG_LEVEL: ${SENTINEL_LOG_LEVEL:-INFO}
+    SENTINEL_CONFIG_OVERLAY: ${SENTINEL_CONFIG_OVERLAY:-}   # Stage 10: `demo` in make demo
     HOME: /tmp
 
 services:
@@ -43,7 +44,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
-    ports: ["127.0.0.1:5432:5432"]
+    ports: ["127.0.0.1:${SENTINEL_PG_PORT:-5432}:5432"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U sentinel_admin -d sentinel"]
       interval: 5s
@@ -60,7 +61,7 @@ services:
       --allowed-hosts mlflow:5000,localhost:5000,127.0.0.1:5000
     volumes:
       - ${SENTINEL_DATA_DIR:?set SENTINEL_DATA_DIR in .env}/mlflow:/data/mlflow
-    ports: ["127.0.0.1:5000:5000"]
+    ports: ["127.0.0.1:${SENTINEL_MLFLOW_PORT:-5000}:5000"]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health', timeout=3)"]
       interval: 5s
@@ -98,7 +99,7 @@ services:
     # In-memory store (traces are lost on restart). UI: http://127.0.0.1:16686
     image: jaegertracing/jaeger:2.11.0@sha256:b585df1b6299bbbd16bf7c679da30389349736e4b6bc8f4f500142a75bf26ca8
     tmpfs: ["/tmp"]
-    ports: ["127.0.0.1:16686:16686"]
+    ports: ["127.0.0.1:${SENTINEL_JAEGER_PORT:-16686}:16686"]
     expose: ["4317", "4318"]
     mem_limit: 1536m
 
@@ -124,10 +125,17 @@ services:
     environment:
       <<: *app_env
       SENTINEL_DASHBOARD_DSN: postgresql://sentinel_dashboard:${SENTINEL_DASHBOARD_DB_PASSWORD}@postgres:5432/sentinel
-    ports: ["127.0.0.1:8501:8501"]
-    mem_limit: 1g
+      # Stage 9 ML pages: read-only registry client + results files
+      SENTINEL_MLFLOW_URI: http://mlflow:5000
+      MLFLOW_ENABLE_ARTIFACTS_PROGRESS_BAR: "false"
+      GIT_PYTHON_REFRESH: quiet
+    volumes:
+      - ${SENTINEL_DATA_DIR}/results:/data/results:ro
+    ports: ["127.0.0.1:${SENTINEL_DASHBOARD_PORT:-8501}:8501"]
+    mem_limit: 1536m
     depends_on:
       postgres: {condition: service_healthy}
+      mlflow: {condition: service_healthy}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8501/_stcore/health', timeout=3)"]
       interval: 5s

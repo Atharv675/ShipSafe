@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
@@ -403,12 +405,41 @@ class RolloutConfig(_Frozen):
         return self
 
 
-def load_yaml(path: Path) -> dict[str, Any]:
+OVERLAY_ENV = "SENTINEL_CONFIG_OVERLAY"
+
+
+def deep_merge(base: dict[str, Any], over: Mapping[str, Any]) -> dict[str, Any]:
+    """`over` wins; nested mappings merge key by key, anything else (lists too) is replaced."""
+    out = dict(base)
+    for k, v in over.items():
+        if isinstance(v, Mapping) and isinstance(out.get(k), dict):
+            out[k] = deep_merge(out[k], v)
+        else:
+            out[k] = v
+    return out
+
+
+def _read_mapping(path: Path) -> dict[str, Any]:
     with path.open(encoding="utf-8") as fh:
         loaded = yaml.safe_load(fh)
     if not isinstance(loaded, dict):
         raise ValueError(f"{path} must contain a YAML mapping")
     return loaded
+
+
+def load_yaml(path: Path) -> dict[str, Any]:
+    """Read a config file. Stage 10 (`make demo`): when SENTINEL_CONFIG_OVERLAY names a folder
+    under configs/ (e.g. `demo`), configs/<overlay>/<same name> is deep-merged over the base
+    file, so an overlay holds only what it changes. Unset = the base files exactly."""
+    data = _read_mapping(path)
+    overlay = os.environ.get(OVERLAY_ENV, "").strip()
+    if overlay and path.parent == CONFIG_DIR:
+        if not overlay.replace("_", "").replace("-", "").isalnum():
+            raise ValueError(f"{OVERLAY_ENV} must be a folder name under configs/")
+        over = CONFIG_DIR / overlay / path.name
+        if over.exists():
+            data = deep_merge(data, _read_mapping(over))
+    return data
 
 
 def load_data_config(path: Path | None = None) -> DataConfig:
@@ -541,12 +572,24 @@ class TracingConfig(_Frozen):
     live_consumer_service_name: str = Field(min_length=1)
 
 
+class MLDashboardConfig(_Frozen):
+    mlflow_ui_url: str = Field(min_length=1)
+    flag_rate_days: int = Field(gt=0)
+    roc_max_fpr: float = Field(gt=0, le=1)
+    calibration_bins: int = Field(ge=2)
+    score_hist_bins: int = Field(ge=2)
+    psi_reference_weeks: WeekRange
+    lookup_limit: int = Field(gt=0)
+    flipped_files_shown: int = Field(gt=0)
+
+
 class DashboardConfig(_Frozen):
     cache_ttl_seconds: float = Field(gt=0)
     default_lookback_minutes: int = Field(gt=0)
     max_lookback_minutes: int = Field(gt=0)
     top_tenants: int = Field(gt=0)
     spike_link_margin_seconds: float = Field(ge=0)
+    ml: MLDashboardConfig
 
 
 class MonitoringConfig(_Frozen):
@@ -653,12 +696,39 @@ class EarlyLabelsConfig(_Frozen):
     flip_rates: list[float] = Field(min_length=1)
 
 
+class P4Grid(_Frozen):
+    margin_points: list[float] = Field(min_length=1)
+    confidence: list[float] = Field(min_length=1)
+    eval_weeks: list[int] = Field(min_length=1)
+    flag_rate_tolerance: list[float] = Field(min_length=1)
+
+
 class P4Config(_Frozen):
     flag_rate_tolerance: float = Field(gt=0)
     new_family_weeks: int = Field(ge=1)
     top_signers: int = Field(ge=1)
     min_early_agreement: float = Field(gt=0, le=1)
     min_clean_files_warn: int = Field(ge=1)
+    signer_slices: list[Literal["unsigned", "self_signed", "signed"]] = Field(min_length=1)
+    eval_weeks: int = Field(ge=1)
+    confidence: float = Field(gt=0, lt=1)
+    never_break_allowed: int = Field(ge=0)
+    must_catch_files: int = Field(ge=1)
+    must_catch_missed_allowed: int = Field(ge=0)
+    min_slice_files: int = Field(ge=1)
+    early_flip_rate: float = Field(ge=0, lt=0.5)
+    sequential_looks: int = Field(ge=1)
+    sequential_alpha: float = Field(gt=0, lt=1)
+    priority_label_weeks: int = Field(ge=0)
+    walk_forward: P4Grid
+
+
+class BlendConfig(_Frozen):
+    weight_candidate: float = Field(gt=0, lt=1)
+
+
+class DriftRecalibrationConfig(_Frozen):
+    on_alert_max_fpr_move_pp: float = Field(gt=0)
 
 
 class BacktestConfig(_Frozen):
@@ -676,6 +746,8 @@ class BacktestConfig(_Frozen):
     recalibration: RecalibrationConfig
     early_labels: EarlyLabelsConfig
     p4: P4Config
+    blend: BlendConfig
+    drift_recalibration: DriftRecalibrationConfig
 
     @model_validator(mode="after")
     def _point_in_time(self) -> BacktestConfig:

@@ -1,0 +1,8 @@
+# DEMO overlay: smaller, fewer trees so `make demo` trains two models in minutes
+# (real: 1000 trees x 1024 leaves). Demo models are for showing the pipeline, not for results.
+lightgbm:
+  params:
+    num_iterations: 150
+    num_leaves: 64
+logreg:
+  max_rows: 10000

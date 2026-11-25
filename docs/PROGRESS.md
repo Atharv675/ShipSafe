@@ -1,6 +1,9 @@
 # Progress
 
-> **HANDOFF (2026-11-24)**
+> **HANDOFF (2026-11-25)**
+> - **Stage 10 DONE (2026-11-25) - project handed over:** `make demo` (538 s) + `make demo-rollout`, gitleaks (`make secrets-scan`), reviewer pass in `docs/LIMITATIONS.md`, README with screenshots, dashboard redesigned after the owner's references. Checks: 346 unit tests passed (94%), 43 integration tests passed, every page under 3 s. CI left out by owner decision. Run one Docker stack at a time (8 GB).
+> - **Stage 9 DONE (2026-11-25):** 8 ML pages in the Streamlit app (http://127.0.0.1:8501, section "ML"). On an existing stack: `make ml-results`, `make migrate` (adds 012), `make up`; check with `make dashboard-check [LOOKUP=<file_id>]`. **Next: Stage 10** (hardening, CI, handover) after the owner's go-ahead.
+> - **Stage 7b DONE (2026-11-25):** Pass 1 + Pass 2 in `docs/BACKTEST.md`; recommendation: recency_weighted + P1/P2 + weekly capped recalibration + ring rollout.
 > - **Stage 8 DONE (2026-11-24):** observability in PostgreSQL `ops_metrics`, traces in Jaeger, alert worker (append-only `alerts`), Streamlit Operations pages (http://127.0.0.1:8501), API on 4 workers. On an existing database: add `SENTINEL_MONITOR_DB_PASSWORD` + `SENTINEL_DASHBOARD_DB_PASSWORD` to `.env`, `docker compose up -d postgres`, `make migrate`, `make up`. New targets: `dashboard`, `dashboard-check`, `load-bodies`, `load-test`, `load-report`, `load-bench`, `load-render`, `profile-api`, `db-outage-check`. Open: the 500 req/s / p99 < 20 ms target is not met on this laptop (306 req/s, see `docs/LOAD_TEST.md`). **Next, after the owner's go-ahead:** the owner's P1-P4 backtest brief (its open questions must be answered first), then Stage 9.
 > - **Stage 7 DONE (2026-11-23):** paired-scoring rollout signal (part A) + main experiment (part B). Results and 5 conclusions in `docs/RESULTS.md`: P1 ships 5/18 harmful, P2 4/17, gate 0/2 but blocks 5 of 7 better candidates (all via its disagreement check). Data in `$SENTINEL_DATA_DIR/results/experiment*.parquet`, MLflow experiment `sentinel-experiment`. Re-run: `make experiment` (imports in `$SENTINEL_DATA_DIR/experiment/Win64/`). **Next: Stage 8** after the owner's go-ahead.
 > - **Stage 7 (2026-11-22):** on an existing database run `make migrate` (adds 009) and `make up`.
@@ -25,10 +28,10 @@
 | 5 | The release gate | DONE |
 | 6 | Ring rollout and automatic rollback [OPTIONAL] | DONE |
 | 7 | The main experiment (+ paired-scoring rollout signal) | DONE |
-| 7b | Release-policy backtest (owner brief, 2 passes) | IN PROGRESS |
+| 7b | Release-policy backtest (owner brief, 2 passes) | DONE (Pass 1 + Pass 2) |
 | 8 | Observability, alerts and load testing | DONE |
-| 9 | ML dashboard (Streamlit) | TODO |
-| 10 | Hardening, CI and handover [STOP] | TODO |
+| 9 | ML dashboard (Streamlit) | DONE |
+| 10 | Hardening, CI and handover [STOP] | DONE (CI left out by owner decision) |
 
 Owner rules: no git/GitHub commands by the assistant; wait for go-ahead after every stage; all tools run in the hardened Docker sandbox.
 
@@ -468,3 +471,138 @@ Found while checking (reported to owner):
   - `make lint` clean (64 files); `make test` 298 passed, 4 skipped, 95%.
 - **Bug found by the tests and fixed:** P1/P2 decisions at T = 52 (serving from week 53) were never taken; the loop started at the first test week.
 - **Waiting for the owner's Kaggle runs:** metadata (1 run) and point-in-time candidates (3 runs). Then `make backtest-import-meta`, `make backtest-import` x3, `make backtest-pass1`, then plain statements, then STOP before Pass 2.
+
+### Pass 1 results (2026-11-25) — STOP before Pass 2
+- **Imports** (sandbox, allow-list + sha256 checked):
+  - metadata 640,000 rows / 64 weeks (`sentinel_stage7b_meta_Win64.zip`, sha256 `34e76846…`);
+  - candidates `last_n_weeks` `92d6ed8a…`, `all_history` `7e3a8dba…`, `recency_weighted` `d9df1ac3…`: 18 candidates, all `label_delay_weeks = 6`, none refused by the point-in-time check.
+- **`make backtest-pass1`** (200 family-clustered resamples, about 12 min): `$SENTINEL_DATA_DIR/results/backtest_pass1_{decisions,weekly,summary,original_harms,early_labels}.parquet`; `docs/BACKTEST.md` written (generated tables + plain statements + assumptions).
+- **Headline:**
+  - M = 2.76 points (noise; X = 0.5);
+  - 0 of 6 Stage 7 harmful swaps survive;
+  - point-in-time: P1 1 harmful of 18 (`last_n_weeks_T52`, -4.57 [-6.83, -0.24], live 14 days), P2 0 of 7, P3 0 promotions (9/18 decided);
+  - mean recall CIs overlap for all policies;
+  - the original P3 was leaky in all 6 decisions;
+  - recalibration cuts P3's shipped FPR from 0.197% to 0.137% (P1 0.132%).
+- **Two bugs found in the first run and fixed** before the reported numbers:
+  - (1) the recalibration pool included the model's own training weeks (v1 cut-off collapsed, shipped FPR 4.5-7.5%) → fit weeks excluded, new unit test;
+  - (2) table 1d included Stage 7's rejected (counterfactual) candidates → promotions only, one row per swap.
+- `make lint` clean (64 files); `make test` 299 passed, 4 skipped; backtest tests 18 passed.
+- **Open for the owner before Pass 2:** confirm signature status as the substitute for "top signers" (P4, N = 10).
+
+### Pass 2 results (2026-11-25) — Stage 7b complete, waiting for the owner
+- **Owner answers (2026-11-25):** signer slice = signature status; must-catch = 500 malware from the evidence weeks that production flags; blend = 0.5/0.5 raw scores.
+- **All P4 thresholds, the walk-forward grid, blend and drift rules were written into `configs/backtest.yaml` before running.**
+- **Code:**
+  - `src/sentinel/backtest/pass2.py` (P4 stages 1-3, walk-forward, blend, drift recalibration, McNemar, training window, policy-difference CIs);
+  - `report.py` Pass 2 section;
+  - `scripts/run_backtest.py pass2`; `make backtest-pass2`;
+  - `tests/unit/test_backtest_pass2.py` (13).
+- **Checks:** `make lint` clean (65 files); `make test` 312 passed, 4 skipped.
+- **`make backtest-pass2`** (about 20 min): `$SENTINEL_DATA_DIR/results/backtest_pass2_*.parquet`; `docs/BACKTEST.md` Pass 2 tables, plain statements, recommendation and assumptions.
+- **Headline:**
+  - P4 promoted 0 of 18 (must-catch blocked 15; no evidence at T = 52 for 3);
+  - no recall difference between any policies is real;
+  - shipped-FPR differences are real and closed by weekly recalibration;
+  - recency_weighted beats last_n_weeks (CI > 0 at four of six retrain weeks);
+  - drift-triggered recalibration gives no benefit;
+  - walk-forward never had labelled outcomes in time.
+  - **Recommendation:** the simpler option (recency_weighted + P1/P2 + weekly capped recalibration + ring rollout).
+- **Slip disclosed:** one host `python -c` to list the keys of `feature_hist.json` (read-only, no install); everything else ran in the sandbox.
+
+---
+
+## Stage 9 — ML dashboard (Streamlit)
+
+Owner go-ahead 2026-11-25 ("start stage 9").
+
+### Plan
+- **Data sources** (only these, per the plan):
+  - PostgreSQL, read-only `sentinel_dashboard` role. New migration `012_stage9.sql` grants SELECT on `shadow_predictions` for the lineage lookup.
+  - MLflow registry (read-only client to `http://mlflow:5000`).
+  - `$SENTINEL_DATA_DIR/results`, mounted read-only into the dashboard container.
+- **`make ml-results`** (sandbox) → `results/ml_scores.parquet`, `ml_models.json`, `ml_psi.parquet`. These hold the per-file scores and labels of v1 and the 18 point-in-time candidates (weeks 45-64, from the Stage 7b exports) plus weekly PSI of v1's top-20 features. Labels never reach PostgreSQL, so Head-to-head and Drift need this file.
+- **Statistics:** new pure functions in `evaluate.py`: `roc_points` (zoomed to FPR <= 1%) and `pr_points`. Everything else (`recall_at_fpr`, `rates_at_threshold`, `reliability_curve`, `population_stability_index`, `wilson_interval`) is reused.
+- **Code:** `src/sentinel/dashboard/ml_data.py` (SQL, registry/results sources, pure transforms) and `ml_pages.py` (8 pages):
+  - ML Overview, Model Registry, Gate Decision Viewer (with verify-hash button), Head-to-head, Drift, Rollout Timeline, Experiment Results (Stage 7 + 7b), Prediction Lookup.
+- **Sidebar filters** shared by the ML pages: time window, model version, ring, tenant.
+- **Config:** `configs/monitoring.yaml` `dashboard.ml` (MLflow UI URL, flag-rate days, ROC zoom, bins, PSI reference weeks).
+- **Compose:** dashboard gets `SENTINEL_MLFLOW_URI` and the results mount.
+- **Tests:** `tests/unit/test_dashboard_ml.py` covers the transforms plus every ML page with AppTest on seeded demo data (canned DB frames, fake registry, synthetic results dir), and empty-data renders. `scripts/dashboard_check.py` renders all 12 pages against the live stack and times them (< 3 s each).
+
+### Check results (2026-11-25)
+- `make lint`: ruff + format clean; mypy strict: no issues in 67 source files.
+- `make test`: 342 passed, 4 skipped. `tests/unit/test_dashboard_ml.py` (30 tests):
+  - ROC/PR maths: step-ROC area equals AUC, the zoom reaches its edge, hand-computed PR points;
+  - gate-bundle transforms and the tamper check;
+  - ring aliases with production fallback; registry join;
+  - head-to-head uses only weeks after both models;
+  - score-histogram shares; rollout spans; filters; experiment transforms; the results reader;
+  - **all 8 ML pages rendered with AppTest on seeded demo data** (canned DB frames, fake registry, synthetic results), plus empty-data renders, a registry outage and the app entry with the 4 shared sidebar filters.
+- `make ml-results`: 199,990 files × 19 models (v1 + 18 point-in-time candidates, weeks 45-64) and PSI for 20 features × 64 weeks, written to `$SENTINEL_DATA_DIR/results`.
+- `make migrate` (adds `012_stage9.sql`) + `make up`; **`make dashboard-check`** renders all 12 pages (4 Operations + 8 ML) against the live stack:
+  - every page shows live data: 2 models / 8 versions; real gate decisions with bundle verify; 8 rollouts (2 complete, 6 rolled back); head-to-head v1 89.12% vs all_history_T54 88.82% recall @ 0.1% FPR; a lookup returning live + shadow rows.
+  - **Page time (warm cache):** 0.1-2.6 s for all pages in two of three full runs. ML Overview measured 0.8-2.2 s across repeated warm renders; single readings of 3.2-3.6 s (ML Overview, Head-to-head) happen when the 10 s query cache expires between the cold and the warm run. The first render after a server start takes about 8-13 s (one-off `import mlflow` + registry + 7-day scan).
+- **Visual check** (headless Chromium over CDP, hardened containers) found and fixed 6 issues before sign-off:
+  1. ring aliases empty: MLflow's version search does not return aliases → read from the registered model;
+  2. v1's as-of week shown as a timestamp → eval week;
+  3. idle stretches bridged in the flag-rate lines → `break_gaps`;
+  4. isolated hourly points invisible → point markers;
+  5. a gate REJECT shown as "Critical" → outcome labels ("Rejected", "Complete");
+  6. faceted interval charts with colliding row labels → one chart per measure, non-zero axes for recall.
+
+### Issues found and fixed (Stage 9)
+- **7-day flag-rate scan** (650k rows, about 1 s) and **MLflow registry calls** (about 0.6 s after import) ran on every page view → cached for 60 s.
+- A sed slip left a literal `\n` in the Makefile again (third time) → fixed with Edit.
+- The Playwright image has no Python package → the screenshot client drives CDP with `websocket-client` from the sandbox image (`suppress_origin`).
+
+---
+
+## Stage 10 — Hardening and handover [STOP]
+
+Owner go-ahead 2026-11-25: "except the github actions do everything else". **No CI workflow is written** (no `.github/`), by owner decision.
+
+### Plan
+- **`make demo`**: an isolated demo stack (compose project `sentinel-demo`, its own database volume, registry, data folder and ports), so the real Win64/Win32 stack and registry are never touched. Steps:
+  - PDF splits (already local, small);
+  - two models (v1 + a retrained candidate, fewer trees);
+  - replay of test weeks with live + shadow scoring;
+  - gate decision; ML results; dashboards filled.
+
+  Target: under 10 minutes on this laptop. Demo-only settings live in a config overlay (`configs/demo/`), labelled as demo.
+- **gitleaks** in pre-commit (pinned) + `make secrets-scan` (pinned image, read-only mount, no network).
+- **README:** Mermaid architecture, headline results (Stages 7, 7b, 8, 9), screenshots of the Operations and ML pages and one Jaeger trace, limitations.
+- **Strict reviewer pass:** the 10 weakest points (code, tests, claims); fix those under an hour; the rest in `docs/LIMITATIONS.md`.
+
+### Check results (2026-11-25)
+- **`make demo`: 538 s end to end** (target < 10 min), measured with the real stack also running.
+  - Isolated project `sentinel-demo`; data in `$SENTINEL_DATA_DIR/demo`; `configs/demo` overlay.
+  - Steps: PDF splits (manifest check passes) → v1 and a candidate trained in parallel → registered → ML results → stack → replay of 12 weeks (live + shadow, `replay-counts wait` OK) → gate **REJECT** (shipped FPR 0.57% vs limit 0.42%; never-break files flagged) → all 12 pages render demo data, each under 3 s warm.
+  - First attempt took 1,213 s (sequential, 1024-leaf trees, 8 GB Docker shared with the real stack). Fixed by training in parallel, using 64-leaf trees and starting the infrastructure early.
+- **`make demo-rollout`: 96 s.** The BAD demo model (0.5 cut-off) was rolled back in ring0 by a never-break canary about 35 s after the start.
+- **gitleaks:** pre-commit hook (v8.21.2) + `make secrets-scan` (pinned image, read-only, no network): **no leaks found**. A planted fake AWS key in a scratch folder **is** found. `.env` is allowlisted only as a git-ignored path.
+- **Reviewer pass:** `docs/LIMITATIONS.md` lists the 10 weakest points. **3 fixed:**
+  - the RESULTS.md Stage 7 claim is marked superseded;
+  - dashboard SQL integration tests added;
+  - the gate log shows the real report path.
+
+  The rest is documented, plus the Docker-memory limit found today.
+- **README:** pitch, Mermaid architecture, `make demo` quick start, headline results (Stages 7b, 8, 9, 10), screenshots of the Operations and ML pages and one Jaeger trace, limitations. CI is left out by owner decision.
+- **Dashboard redesign after the owner's reference images (same day):**
+  - sections Observe / Intelligence / Enforce / Operate;
+  - KPI cards with accent lines and sparklines;
+  - donuts with counted legends (verdict mix, gate decisions, rollout outcomes);
+  - progress rows (flag rate by ring, busiest tenants, blocking checks, rollback signals, most-shifted features);
+  - release-path stage cards (ML Overview) and version cards (Model Registry);
+  - grouped bars (Experiment Results, Head-to-head);
+  - 8-slot palette re-validated on `#121214`.
+
+  `src/sentinel/dashboard/ui.py` holds the component kit.
+- **Checks:**
+  - `make lint` clean (68 files, mypy strict);
+  - **`make test`: 346 passed, 5 skipped, coverage 94%**;
+  - **`make test-integration`: 43 passed** (19 new dashboard SQL tests);
+  - **`make dashboard-check`: all 12 pages 0.1-2.4 s warm**, none over the 3 s budget;
+  - `make secrets-scan`: no leaks.
+- **Incident:** with both stacks and a 6 GB test sandbox running, Docker Desktop's engine returned HTTP 500 to every call. It recovered by itself with no data lost. The demo stack is now stopped (`docker compose -p sentinel-demo start` brings it back). Documented in LIMITATIONS.
+- **Slips:** none new. Everything ran in the sandbox or hardened containers.

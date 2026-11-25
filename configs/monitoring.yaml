@@ -37,3 +37,13 @@ dashboard:
   # a latency bucket whose p99 is above the p99 alert threshold is listed as a spike with a
   # Jaeger link to that service and time window (+- this margin)
   spike_link_margin_seconds: 30
+  # Stage 9 ML section
+  ml:
+    mlflow_ui_url: http://127.0.0.1:5000      # links from the Model Registry page
+    flag_rate_days: 7                         # ML Overview flag-rate card
+    roc_max_fpr: 0.01                         # Head-to-head ROC zoom (0-1% FPR)
+    calibration_bins: 10
+    score_hist_bins: 30                       # Drift: score distribution by week (log-odds)
+    psi_reference_weeks: {first: 44, last: 47}  # Drift heatmap reference = v1's last 4 fit weeks
+    lookup_limit: 200                         # Prediction Lookup: rows per query
+    flipped_files_shown: 50                   # Gate Decision Viewer table

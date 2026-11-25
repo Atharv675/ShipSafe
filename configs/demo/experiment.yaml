@@ -1,0 +1,4 @@
+# DEMO overlay: the demo export (Head-to-head, Drift pages) is built from the PDF models.
+file_type: PDF
+retrain_weeks: [52]
+retrain_policies: [last_n_weeks]

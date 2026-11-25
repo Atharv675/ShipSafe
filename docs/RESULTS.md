@@ -28,6 +28,13 @@ Drift alerts (P1 candidates, real stream): 1 alerts on 18 candidates, 0 of them 
 
 ## Conclusions
 
+> **Superseded in part by the Stage 7b point-in-time backtest ([BACKTEST.md](BACKTEST.md)), 2026-11-25.**
+> - **Harm definition:** with labels 6 weeks late, a harm margin from measured week-to-week noise (M = 2.76 points) and family-clustered CIs, none of the 6 "harmful" swaps below holds up. All are within noise.
+> - **Gate timing:** the gate timing used here (decision at T+6) used shadow labels before they existed.
+> - **Recall:** no release policy is better on recall within the CIs.
+>
+> The conclusions below are kept as written for the record; read them with that correction.
+
 Setup (from `configs/experiment.yaml`): Win64, 6 retrain weeks (T = 52, 54, ..., 62) × 3 retraining policies = 18 candidates. Each policy is replayed on test weeks 53-64 from v1. "Harmful" means the promoted model's recall at 0.1% FPR, over the 4 weeks after it went live, is below that of the model it replaced (margin 0), or it flags a never-break file. The P3 gate ran unchanged: no setting was tuned on these weeks. The gate needs 2 shadow weeks plus 28 days for labels, so it decides at T+6.
 
 1. **Auto-promotion shipped a worse model 5 times in 18 (28%, bootstrap 11-49%), and a validation-AUC check stopped only one of them (P2: 4 of 17).** Validation AUC on the candidate's own calibration weeks says little about the next four weeks. Every harm was small: a recall loss of 0.09 to 0.58 points. None of the 18 candidates flagged a never-break file.
