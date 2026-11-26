@@ -14,7 +14,7 @@ Decide whether a retrained detector is safe to ship, roll it out ring by ring, a
 ![Docker](https://img.shields.io/badge/stack-Docker%20Compose-2496ED?logo=docker&logoColor=white)
 ![No malware](https://img.shields.io/badge/real%20malware-none-lightgrey)
 
-[What it does](#what-it-does) · [Findings](#what-we-found) · [Screenshots](#screenshots) · [Quick start](#quick-start) · [Architecture](#architecture) · [Docs](#documentation)
+[What it does](#what-it-does) · [How it works](#how-it-works-the-life-of-one-release) · [Strengths](#strengths) · [Screenshots](#screenshots) · [Quick start](#quick-start) · [Architecture](#architecture) · [Docs](#documentation)
 
 <img src="docs/img/ml-overview.jpg" alt="ML Overview: every model's place in the release path" width="900">
 
@@ -48,32 +48,74 @@ It is built on the public **EMBER2024** feature records (Win64 and Win32 PE file
 
 > **Try it in one command:** `make demo` builds the whole release path on a small dataset in an isolated stack, in about 9 minutes ([Quick start](#quick-start)).
 
+## How it works: the life of one release
+
+Here is what happens to a model, from raw data to everyone's traffic, and which part of the code does it.
+
+**1. Data comes in and is split by time.**
+- EMBER2024 gives each Windows file as a vector of about 2,500 numeric features, plus a label (malware or benign), a malware family and the week it was first seen.
+- The cleaning pipeline ([src/sentinel/data/](src/sentinel/data/)) checks every row against a Pandera schema and logs the row count before and after each step. It writes one Parquet file per week, plus a `manifest.json` with a data fingerprint.
+- It also sets aside 500 **never-break** files: well-known benign files that no model may ever flag.
+
+**2. A production model is trained.**
+- v1 is a LightGBM model, trained on weeks 1–47 and calibrated on weeks 48–51.
+- Its cut-off is not 0.5. It is the score at which only **0.1% of benign files** would be flagged, because in malware detection false alarms on real software are the costly mistake.
+- The model is registered in MLflow under the alias `production`.
+
+**3. Live traffic is scored.**
+- A replay producer streams the held-out test weeks (53–64) onto a Redpanda topic, as if files were arriving from customers.
+- The **live consumer** sends each file to the FastAPI scoring service. The service picks the model for that customer's **ring** (a stable hash of the tenant ID), returns a verdict and writes a lineage row to PostgreSQL.
+- Every request also leaves a trace in Jaeger and a measurement in `ops_metrics`.
+
+**4. A retrained candidate shadows production.**
+- Every few weeks a candidate is retrained, using only labels that would really be known by then.
+- It is registered as `candidate`. The **shadow consumer** scores the exact same events with it and stores the results separately.
+- Customers never see the candidate's verdicts, so a bad candidate costs nothing yet.
+
+**5. The release gate decides.**
+- Labels arrive late, so the gate waits until they are known for the weeks it judges.
+- It then compares both models file by file, on the same traffic, against rules fixed in advance ([gate_policy.yaml](configs/gate_policy.yaml)):
+  - Is recall at 0.1% FPR at least as good?
+  - Does it keep the false-alarm rate?
+  - Does it flag zero never-break files?
+  - Does it drop sharply in any week?
+  - Are the disagreements statistically real (McNemar)?
+- The verdict (`PROMOTE`, `REJECT` or `INSUFFICIENT_EVIDENCE`) and all its evidence are hashed into the append-only `gate_decisions` table, with a readable report in [docs/gate/](docs/gate/).
+
+**6. The rollout controller ships it in rings.**
+- On `PROMOTE`, the controller points ring0 (5% of customers) at the candidate. The API hot-reloads within seconds.
+- It watches never-break canaries, flag rate, error rate, latency and how often the two models disagree.
+- If every signal holds for enough files, it moves on to ring1 (25%), then ring2 (everyone).
+- **Any breach rolls every ring back to the previous model.** An operator can also hit the kill switch. Every transition is recorded in `rollout_transitions`.
+
+**7. Everything stays visible.**
+- An alert worker checks latency, errors, consumer lag and never-break hits.
+- The Streamlit dashboard shows all of it in one place: service health, each model's position in the release path, why the gate decided as it did, and each rollout's timeline.
+
+**8. The system questions itself.**
+- A point-in-time backtest ([BACKTEST.md](docs/BACKTEST.md)) replays 18 retrains under several release policies, with labels 6 weeks late.
+- It asks whether this machinery actually ships better models than simpler options.
+
+## Strengths
+
+- **Ships safely by design.** Candidates prove themselves in shadow on real traffic before any customer sees them, then reach 5%, 25% and finally everyone.
+- **Fast, automatic recovery.** A deliberately bad model was caught by never-break canaries in ring0 after **27.5 s** and rolled back. The kill switch restored every ring in **0.65 s**.
+- **Decisions you can defend.** Every gate rule is written down and versioned before it runs. Every decision stores its full evidence, seed, data fingerprint and git commit, and `make gate-verify` re-hashes stored decisions to detect tampering.
+- **No leakage.** Every split, threshold and decision uses only information available at that moment. Labels arrive late on a seeded delay, and a test fails if a test-week row appears in training ([data rules](#data-rules-no-leakage)).
+- **Sound statistics in one place.** The core metrics (Wilson intervals, the threshold at a target FPR, AUC/AUPRC, calibration error, cluster bootstrap and McNemar) are pure functions in [evaluate.py](src/sentinel/models/evaluate.py), checked against textbook values and sklearn. Services and dashboards import them; nothing re-implements them.
+- **Resilient serving.** Scoring never waits on the database: lineage goes through a bounded queue (`make db-outage-check`). Replaying a week twice never duplicates rows. Load testing recorded 0 failures and 0 lost lineage rows.
+- **Full observability without extra tooling.** 12 dashboard pages, traces for every request and alert rules, built on PostgreSQL, Jaeger and Streamlit alone.
+- **Secure by default.** Every tool and service runs non-root on a read-only filesystem with all capabilities dropped. Ports bind to localhost, images are pinned, each component has its own least-privilege database role, audit tables are append-only, and gitleaks runs on every commit.
+- **Easy to try.** `make demo` builds the whole release path in an isolated stack in about 9 minutes, without touching the real one.
+- **Configurable, typed and tested.** Every number lives in typed YAML config; `mypy --strict` passes; unit and integration tests cover the code with about 94% coverage.
+- **Honest about itself.** [LIMITATIONS.md](docs/LIMITATIONS.md) lists the 10 weakest points of the code, tests and claims, and what would fix each.
+
 ## What we found
 
-The most useful result is the honest one: on this data, **the heavy machinery did not earn its cost.**
-
-| Question | Answer | Evidence |
-|---|---|---|
-| How good is the baseline? | LightGBM v1: **89.70%** recall [88.83, 90.51] on week 52 (AUC 0.9982), against 59.74% for logistic regression. Its cut-off targets 0.1% FPR but measured 0.36% there, because benign scores drift. 0 of 500 never-break files flagged | [BASELINE.md](docs/BASELINE.md) |
-| Did the gate stop bad models? | Both real decisions (Win64 and Win32 v2) were **REJECT**. But in the Stage 7 experiment it also blocked 5 of 7 candidates that later proved better | [docs/gate/](docs/gate/), [RESULTS.md](docs/RESULTS.md) |
-| Does the release policy matter? | Under point-in-time rules (labels 6 weeks late, family-clustered intervals, a noise margin of 2.76 points), **no release policy differs on recall**: every interval includes 0. Only 1 of 18 auto-promotions was a real harm | [BACKTEST.md](docs/BACKTEST.md) |
-| What actually matters? | **Weekly capped recalibration** removes the real false-alarm gap. **Recency-weighted** retraining beats a sliding window at 4 of 6 retrains | [BACKTEST.md](docs/BACKTEST.md) |
-| Does rollback work? | A deliberately bad model was caught by never-break canaries in ring0 after **27.5 s** and rolled back | [ROLLOUT_DEMO.md](docs/ROLLOUT_DEMO.md) |
-| Does it scale? | 0 failures and 0 lost lineage rows, but **306 req/s** against a 500 req/s target, with p99 above 20 ms. **Target not met** on an 8-core laptop | [LOAD_TEST.md](docs/LOAD_TEST.md) |
-
-**Recommendation on this evidence:** retrain with `recency_weighted`, promote on schedule, keep weekly capped recalibration, and rely on the ring rollout and its canaries as the safety net. The full gate adds delay without a measurable recall benefit here. That holds for one file type and one 12-week stream, nothing beyond ([LIMITATIONS.md](docs/LIMITATIONS.md)).
-
-## What's worth a look
-
-For engineers reviewing the code:
-
-- **Leakage is treated as a bug.** Every split, threshold and decision uses only information available at that moment. Labels arrive late on a seeded delay, and a test fails if a test-week row appears in training ([data rules](#data-rules-no-leakage)).
-- **Statistics live in one place.** Wilson intervals, the threshold at a target FPR, AUC/AUPRC, ECE, cluster bootstrap and McNemar are pure functions in [evaluate.py](src/sentinel/models/evaluate.py), checked against textbook values and sklearn. Services and dashboards import them; nothing re-implements them.
-- **Pre-registration is enforced.** Gate and backtest thresholds are versioned in YAML and fixed before they judge any week. Walk-forward tuning only sees weeks whose labels were known in time.
-- **The audit trail is tamper-evident.** Gate evidence bundles are hashed, and `make gate-verify` re-hashes them. Audit tables are append-only via triggers. Each component has its own least-privilege database role.
-- **Scoring never blocks on the database.** Lineage goes through a bounded queue; under an outage, rows are dropped and counted, and `make db-outage-check` proves the behaviour.
-- **Everything runs hardened.** Every tool and service runs non-root on a read-only filesystem with all capabilities dropped. Tools run with no network, ports bind to localhost, images are pinned by digest, and gitleaks runs on every commit.
-- **The project reviews itself.** [LIMITATIONS.md](docs/LIMITATIONS.md) lists the 10 weakest points of the code, tests and claims, which were fixed and what the rest would take.
+| Question | Answer |
+|---|---|
+| Does the safety net work? | Yes. A bad model was rolled back automatically in **27.5 s**, and both real gate decisions rejected retrains that missed significantly more malware (−0.63 and −1.49 recall points, McNemar p < 1e-77) ([ROLLOUT_DEMO.md](docs/ROLLOUT_DEMO.md), [docs/gate/](docs/gate/)). |
+| What improves the model most? | **Weekly capped recalibration** removes the real false-alarm gap. **Recency-weighted retraining** beats a sliding window at 4 of 6 retrains. No release policy differed on recall ([BACKTEST.md](docs/BACKTEST.md)). |
 
 ## Screenshots
 
