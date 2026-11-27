@@ -246,7 +246,6 @@ flowchart LR
 
 **The model.**
 - v1 is LightGBM, trained on weeks 1–47 and calibrated on weeks 48–51, with week 52 held out.
-- Its cut-off is set for a **0.1% false-positive rate**, not 0.5.
 - EMBER2024 has 52 training weeks and 12 test weeks (53–64).
 
 **Observability** deliberately uses PostgreSQL `ops_metrics`, Jaeger and Streamlit only: no Prometheus, no Grafana.
